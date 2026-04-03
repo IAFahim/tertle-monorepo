@@ -1,0 +1,55 @@
+name: Sync tertle repos
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Clean old data
+        run: |
+          rm -rf .gitmodules
+          git rm --cached -r . 2>/dev/null || true
+          for repo in com.unity.netcode com.unity.entities com.bovinelabs.core com.bovinelabs.recast com.bovinelabs.anchor com.bovinelabs.bridge com.bovinelabs.timeline com.bovinelabs.essence com.bovinelabs.nerve com.bovinelabs.reaction; do
+            rm -rf "$repo"
+          done
+
+      - name: Clone all tertle repos
+        run: |
+          # Format: "repo_name:branch_or_tag"
+          REPOS=(
+            "com.unity.netcode:master"
+            "com.unity.entities:main"
+            "com.bovinelabs.core:1.6.1"
+            "com.bovinelabs.recast:main"
+            "com.bovinelabs.anchor:main"
+            "com.bovinelabs.bridge:main"
+            "com.bovinelabs.timeline:main"
+            "com.bovinelabs.essence:main"
+            "com.bovinelabs.nerve:main"
+            "com.bovinelabs.reaction:main"
+          )
+          for entry in "${REPOS[@]}"; do
+            repo="${entry%%:*}"
+            ref="${entry##*:}"
+            git clone --depth 1 --branch "$ref" "https://gitlab.com/tertle/$repo.git" "$repo" 2>&1 || echo "Failed to clone $repo@$ref"
+            rm -rf "$repo/.git"
+          done
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "sync: $(date -u +%Y-%m-%d_%H:%M)"
+          git push
