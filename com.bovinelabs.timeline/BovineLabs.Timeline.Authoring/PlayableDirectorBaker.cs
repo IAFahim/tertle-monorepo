@@ -1,4 +1,4 @@
-﻿// <copyright file="PlayableDirectorBaker.cs" company="BovineLabs">
+// <copyright file="PlayableDirectorBaker.cs" company="BovineLabs">
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
@@ -40,30 +40,36 @@ namespace BovineLabs.Timeline.Authoring
 
             this.AddComponent<ClockData>(entity);
 
+            var clockSettings = new ClockSettings
+            {
+                UpdateMode = ClockUpdateMode.GameTime,
+                DeltaTime = DiscreteTime.Zero,
+                TimeScale = 1,
+                Reverse = false,
+            };
+
             switch (director.timeUpdateMode)
             {
                 case DirectorUpdateMode.DSPClock:
-                    this.AddComponent<ClockTypeUnscaledGameTime>(entity);
+                    clockSettings.UpdateMode = ClockUpdateMode.UnscaledGameTime;
                     Debug.LogWarning("DSP Clock mode not yet supported in DOTS. Using realtime clock instead");
                     break;
 
                 case DirectorUpdateMode.GameTime:
-                    this.AddComponent<ClockTypeGameTime>(entity);
+                    clockSettings.UpdateMode = ClockUpdateMode.GameTime;
                     break;
 
                 case DirectorUpdateMode.UnscaledGameTime:
-                    this.AddComponent<ClockTypeUnscaledGameTime>(entity);
+                    clockSettings.UpdateMode = ClockUpdateMode.UnscaledGameTime;
                     break;
 
                 case DirectorUpdateMode.Manual:
-                    this.AddComponent(entity, new ClockTypeConstant
-                    {
-                        DeltaTime = DiscreteTime.Zero,
-                        TimeScale = 1,
-                    });
-
+                    clockSettings.UpdateMode = ClockUpdateMode.Constant;
                     break;
             }
+
+            this.AddComponent(entity, clockSettings);
+
 
             var duration = new DiscreteTime(director.playableAsset.duration);
             switch (director.extrapolationMode)
@@ -87,6 +93,7 @@ namespace BovineLabs.Timeline.Authoring
 
                     break;
                 case DirectorWrapMode.None:
+                default:
                     // SampleLastFrame is enabled to ensure the final frame is evaluated before stopping
                     this.AddComponent(entity, new TimerRange
                     {

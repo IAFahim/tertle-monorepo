@@ -65,7 +65,7 @@ namespace BovineLabs.Timeline.Authoring
         /// </summary>
         /// <param name="asset">The track asset to find the binding for.</param>
         /// <returns>The bound object, or null if no binding exists for the track.</returns>
-        public Object? FindObject(TrackAsset? asset)
+        public Object FindObject(TrackAsset asset)
         {
             if (asset == null || this.Bindings == null)
             {

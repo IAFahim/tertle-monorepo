@@ -115,6 +115,12 @@ namespace BovineLabs.Timeline.Authoring
             }
         }
 
+        /// <summary>
+        /// Gets the extrapolation positions that match a specific extrapolation mode.
+        /// </summary>
+        /// <param name="clip">The timeline clip to inspect.</param>
+        /// <param name="mode">The extrapolation mode to match.</param>
+        /// <returns>The extrapolation positions that use the specified mode.</returns>
         private static ExtrapolationPosition GetExtrapolationOptions(TimelineClip clip, TimelineClip.ClipExtrapolation mode)
         {
             var options = ExtrapolationPosition.None;

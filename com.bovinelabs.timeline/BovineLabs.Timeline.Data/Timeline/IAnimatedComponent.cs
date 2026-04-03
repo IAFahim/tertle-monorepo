@@ -12,6 +12,7 @@ namespace BovineLabs.Timeline.Data
         where T : unmanaged
     {
         /// <summary> Gets the value to use when the component is not being animated. </summary>
+        /// <value>The value used when no clip is driving the component.</value>
         T Value { get; }
     }
 }

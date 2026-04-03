@@ -1,12 +1,12 @@
 {
   "name": "com.bovinelabs.timeline",
   "description": "Timeline wrapper for DOTS.",
-  "version": "0.2.0",
-  "unity": "6000.0",
+  "version": "1.0.2",
+  "unity": "6000.3",
   "displayName": "BovineLabs Timeline",
   "dependencies": {
-    "com.bovinelabs.core": "1.3.6",
-    "com.unity.timeline": "1.8.6"
+    "com.bovinelabs.core": "1.6.0",
+    "com.unity.timeline": "1.8.11"
   },
   "keywords": [
     "DOTS",

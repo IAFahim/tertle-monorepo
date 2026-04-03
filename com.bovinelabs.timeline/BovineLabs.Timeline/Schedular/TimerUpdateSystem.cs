@@ -1,4 +1,4 @@
-﻿// <copyright file="TimerUpdateSystem.cs" company="BovineLabs">
+// <copyright file="TimerUpdateSystem.cs" company="BovineLabs">
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
@@ -30,6 +30,10 @@ namespace BovineLabs.Timeline.Schedular
             {
                 TimerDatas = SystemAPI.GetComponentLookup<TimerData>(),
                 Actives = SystemAPI.GetComponentLookup<TimelineActive>(),
+                TimerDataLinks = SystemAPI.GetBufferLookup<TimerDataLink>(true),
+                CompositeTimerLinks = SystemAPI.GetBufferLookup<CompositeTimerLink>(true),
+                CompositeTimers = SystemAPI.GetComponentLookup<CompositeTimer>(true),
+                Timers = SystemAPI.GetComponentLookup<Timer>(),
             }.ScheduleParallel(state.Dependency);
 
             state.Dependency = new TimersUpdateJob
@@ -58,6 +62,65 @@ namespace BovineLabs.Timeline.Schedular
             }.ScheduleParallel(stoppedQuery, state.Dependency);
         }
 
+        private static void UpdateCompositeTimers(
+            Entity entity, in TimerData source, in DynamicBuffer<TimerDataLink> timerDataLinks, ComponentLookup<TimerData> timerDatas,
+            BufferLookup<TimerDataLink> timerDataLinksLookup, BufferLookup<CompositeTimerLink> compositeTimerLinks,
+            ComponentLookup<CompositeTimer> compositeTimers, ComponentLookup<Timer> timers, ComponentLookup<TimelineActive> actives)
+        {
+            foreach (var link in timerDataLinks.AsNativeArray())
+            {
+                timerDatas[link.Value] = source;
+            }
+
+            if (!compositeTimerLinks.TryGetBuffer(entity, out var compositeLinks))
+            {
+                return;
+            }
+
+            foreach (var compLink in compositeLinks.AsNativeArray())
+            {
+                var composite = compositeTimers[compLink.Value];
+                var newLinks = timerDataLinksLookup[compLink.Value];
+                ref var timer = ref timers.GetRefRW(compLink.Value).ValueRW;
+
+                timer.Time = (source.Time * composite.Scale) + composite.Offset;
+                timer.DeltaTime = source.DeltaTime * composite.Scale;
+                timer.TimeScale = source.TimeScale * composite.Scale;
+
+                var active = source.Time >= composite.ActiveRange.Start && source.Time < composite.ActiveRange.End;
+                var activeRW = actives.GetEnabledRefRW<TimelineActive>(compLink.Value);
+                if (active != activeRW.ValueRO)
+                {
+                    activeRW.ValueRW = active;
+
+                    if (active)
+                    {
+                        foreach (var link in newLinks.AsNativeArray())
+                        {
+                            actives.SetComponentEnabled(link.Value, true);
+                        }
+                    }
+                    else
+                    {
+                        foreach (var link in newLinks.AsNativeArray())
+                        {
+                            actives.SetComponentEnabled(link.Value, false);
+                        }
+                    }
+                }
+
+                var newSource = new TimerData
+                {
+                    DeltaTime = timer.DeltaTime,
+                    TimeScale = timer.TimeScale,
+                    Time = timer.Time,
+                };
+
+                UpdateCompositeTimers(compLink.Value, newSource, newLinks, timerDatas, timerDataLinksLookup, compositeTimerLinks, compositeTimers, timers,
+                    actives);
+            }
+        }
+
         [WithAll(typeof(TimelineActive))]
         [WithDisabled(typeof(TimelineActivePrevious))]
         [BurstCompile]
@@ -69,24 +132,42 @@ namespace BovineLabs.Timeline.Schedular
             [NativeDisableParallelForRestriction]
             public ComponentLookup<TimelineActive> Actives;
 
-            private void Execute(ref Timer timer, in ClockData clockData, in DynamicBuffer<TimerDataLink> timerDataLinks)
+            [ReadOnly]
+            [NativeDisableContainerSafetyRestriction]
+            public BufferLookup<TimerDataLink> TimerDataLinks;
+
+            [ReadOnly]
+            public BufferLookup<CompositeTimerLink> CompositeTimerLinks;
+
+            [ReadOnly]
+            public ComponentLookup<CompositeTimer> CompositeTimers;
+
+            [NativeDisableParallelForRestriction]
+            [NativeDisableContainerSafetyRestriction]
+            public ComponentLookup<Timer> Timers;
+
+            private void Execute(
+                Entity entity, ref Timer timer, in TimerRange timerRange, in ClockSettings clockSettings, in ClockData clockData,
+                in DynamicBuffer<TimerDataLink> timerDataLinks)
             {
                 timer.DeltaTime = DiscreteTime.Zero;
                 timer.TimeScale = clockData.Scale;
-                timer.Time = DiscreteTime.Zero;
-                // TODO this doesn't seem to factor in initialize time
+                timer.Time = clockSettings.Reverse ? timerRange.Range.End : timerRange.Range.Start;
 
                 foreach (var link in timerDataLinks.AsNativeArray())
                 {
-                    this.TimerDatas[link.Value] = new TimerData
-                    {
-                        DeltaTime = timer.DeltaTime,
-                        TimeScale = timer.TimeScale,
-                        Time = timer.Time,
-                    };
-
                     this.Actives.SetComponentEnabled(link.Value, true);
                 }
+
+                var source = new TimerData
+                {
+                    DeltaTime = timer.DeltaTime,
+                    TimeScale = timer.TimeScale,
+                    Time = timer.Time,
+                };
+
+                UpdateCompositeTimers(entity, source, timerDataLinks, this.TimerDatas, this.TimerDataLinks, this.CompositeTimerLinks, this.CompositeTimers,
+                    this.Timers, this.Actives);
             }
         }
 
@@ -149,7 +230,8 @@ namespace BovineLabs.Timeline.Schedular
             public ComponentLookup<Timer> Timers;
 
             private void Execute(
-                Entity entity, ref Timer timer, ref TimerRange timerRange, in ClockData clockData, in DynamicBuffer<TimerDataLink> timerDataLinks)
+                Entity entity, ref Timer timer, ref TimerRange timerRange, in ClockSettings clockSettings, in ClockData clockData,
+                in DynamicBuffer<TimerDataLink> timerDataLinks)
             {
                 var timerPaused = this.TimerPauseds.GetEnabledRefRW<TimerPaused>(entity);
                 var active = this.Actives.GetEnabledRefRW<TimelineActive>(entity);
@@ -162,7 +244,7 @@ namespace BovineLabs.Timeline.Schedular
 
                 if (!timerPaused.ValueRO)
                 {
-                    TimerRangeImpl.ApplyTimerRange(ref timer, ref timerRange, previousTime, timerPaused, active);
+                    TimerRangeImpl.ApplyTimerRange(ref timer, ref timerRange, previousTime, timerPaused, active, clockSettings.Reverse);
                 }
 
                 var source = new TimerData
@@ -172,63 +254,8 @@ namespace BovineLabs.Timeline.Schedular
                     Time = timer.Time,
                 };
 
-                this.Update(entity, source, timerDataLinks);
-            }
-
-            private void Update(Entity entity, in TimerData source, in DynamicBuffer<TimerDataLink> timerDataLinks)
-            {
-                foreach (var link in timerDataLinks.AsNativeArray())
-                {
-                    this.TimerDatas[link.Value] = source;
-                }
-
-                if (!this.CompositeTimerLinks.TryGetBuffer(entity, out var compositeLinks))
-                {
-                    return;
-                }
-
-                foreach (var compLink in compositeLinks.AsNativeArray())
-                {
-                    var composite = this.CompositeTimers[compLink.Value];
-                    var newLinks = this.TimerDataLinks[compLink.Value];
-                    ref var timer = ref this.Timers.GetRefRW(compLink.Value).ValueRW;
-
-                    timer.Time = (source.Time * composite.Scale) + composite.Offset;
-                    timer.DeltaTime = source.DeltaTime * composite.Scale;
-                    timer.TimeScale = source.TimeScale * composite.Scale;
-
-                    var active = source.Time >= composite.ActiveRange.Start && source.Time < composite.ActiveRange.End;
-                    var activeRW = this.Actives.GetEnabledRefRW<TimelineActive>(compLink.Value);
-                    if (active != activeRW.ValueRO)
-                    {
-                        activeRW.ValueRW = active;
-
-                        // Enable or disable everything
-                        if (active)
-                        {
-                            foreach (var link in newLinks.AsNativeArray())
-                            {
-                                this.Actives.SetComponentEnabled(link.Value, true);
-                            }
-                        }
-                        else
-                        {
-                            foreach (var link in newLinks.AsNativeArray())
-                            {
-                                this.Actives.SetComponentEnabled(link.Value, false);
-                            }
-                        }
-                    }
-
-                    var newSource = new TimerData
-                    {
-                        DeltaTime = timer.DeltaTime,
-                        TimeScale = timer.TimeScale,
-                        Time = timer.Time,
-                    };
-
-                    this.Update(compLink.Value, newSource, newLinks);
-                }
+                UpdateCompositeTimers(entity, source, timerDataLinks, this.TimerDatas, this.TimerDataLinks, this.CompositeTimerLinks, this.CompositeTimers,
+                    this.Timers, this.Actives);
             }
         }
     }

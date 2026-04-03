@@ -27,7 +27,8 @@ namespace BovineLabs.Timeline.Authoring
         /// <inheritdoc />
         public ClipCaps clipCaps => ClipCaps.ClipIn | ClipCaps.SpeedMultiplier;
 
-        /// <summary> Gets the default duration of the clip used by the UI, based on the referenced timeline. </summary>
+        /// <summary>Gets the default duration of the clip used by the UI, based on the referenced timeline.</summary>
+        /// <value>The default clip duration in seconds.</value>
         public override double duration => this.DefaultClipDuration;
 
         /// <inheritdoc />
@@ -102,7 +103,7 @@ namespace BovineLabs.Timeline.Authoring
         private class TimeSyncBehaviour : PlayableBehaviour
         {
             /// <summary> The nested PlayableDirector to synchronize time with. </summary>
-            public PlayableDirector? Director;
+            public PlayableDirector Director;
 
             /// <inheritdoc />
             public override void PrepareFrame(Playable playable, FrameData info)

@@ -8,20 +8,20 @@ namespace BovineLabs.Timeline.Data.Schedular
     using Unity.IntegerTime;
 
     /// <summary>
-    /// Composite timer is a Timer whose time is a transformation from a non-Composite timer
+    /// Composite timer is a timer whose time is a transformation from a non-composite timer.
     /// </summary>
     public struct CompositeTimer : IComponentData
     {
-        /// <summary> The timer this is a transformation of. </summary>
+        /// <summary>The timer this is a transformation of.</summary>
         public Entity SourceTimer;
 
-        /// <summary> Time offset from the source timer </summary>
+        /// <summary>Time offset from the source timer.</summary>
         public DiscreteTime Offset;
 
-        /// <summary> The scale offset from the source timer </summary>
+        /// <summary>The scale offset from the source timer.</summary>
         public double Scale;
 
-        /// <summary> The range of the source timer. This range will raise the culled flag inside TimerData that reference this </summary>
+        /// <summary>The active range of the source timer.</summary>
         public ActiveRange ActiveRange;
     }
 }

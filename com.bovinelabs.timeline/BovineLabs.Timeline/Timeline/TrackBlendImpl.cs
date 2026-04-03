@@ -4,7 +4,6 @@
 
 namespace BovineLabs.Timeline
 {
-    using System.Runtime.CompilerServices;
     using BovineLabs.Timeline.Data;
     using Unity.Burst;
     using Unity.Burst.Intrinsics;
@@ -12,6 +11,11 @@ namespace BovineLabs.Timeline
     using Unity.Entities;
     using Unity.Jobs;
 
+    /// <summary>
+    /// Helper that schedules clip blending jobs for a specific animated component type.
+    /// </summary>
+    /// <typeparam name="T">The value type being blended.</typeparam>
+    /// <typeparam name="TC">The animated component type.</typeparam>
     public unsafe struct TrackBlendImpl<T, TC>
         where T : unmanaged
         where TC : unmanaged, IAnimatedComponent<T>
@@ -23,32 +27,38 @@ namespace BovineLabs.Timeline
 
         private ComponentTypeHandle<TC> animatedHandle;
         private ComponentTypeHandle<TrackBinding> trackBindingHandle;
-        private ComponentTypeHandle<LocalTime> localTimeHandle;
         private ComponentTypeHandle<ClipWeight> clipWeightHandle;
 
+        /// <summary>
+        /// Initializes internal queries and state.
+        /// </summary>
+        /// <param name="state">The system state.</param>
         public void OnCreate(ref SystemState state)
         {
             this.blendResults = new NativeParallelHashMap<Entity, MixData<T>>(64, Allocator.Persistent);
 
             this.unblendedQuery = new EntityQueryBuilder(Allocator.Temp)
                 .WithAllRW<TC>()
-                .WithAll<TimelineActive, TrackBinding, LocalTime>()
+                .WithAll<TimelineActive, TrackBinding>()
                 .WithAll<ClipActive>()
                 .WithNone<ClipWeight>()
                 .Build(ref state);
 
             this.blendedQuery = new EntityQueryBuilder(Allocator.Temp)
                 .WithAllRW<TC>()
-                .WithAll<TimelineActive, TrackBinding, LocalTime, ClipWeight>()
+                .WithAll<TimelineActive, TrackBinding, ClipWeight>()
                 .WithAll<ClipActive>()
                 .Build(ref state);
 
             this.animatedHandle = state.GetComponentTypeHandle<TC>();
             this.trackBindingHandle = state.GetComponentTypeHandle<TrackBinding>(true);
-            this.localTimeHandle = state.GetComponentTypeHandle<LocalTime>(true);
             this.clipWeightHandle = state.GetComponentTypeHandle<ClipWeight>(true);
         }
 
+        /// <summary>
+        /// Disposes of internal allocations.
+        /// </summary>
+        /// <param name="state">The system state.</param>
         public void OnDestroy(ref SystemState state)
         {
             this.blendResults.Dispose();
@@ -69,7 +79,6 @@ namespace BovineLabs.Timeline
         {
             this.animatedHandle.Update(ref state);
             this.trackBindingHandle.Update(ref state);
-            this.localTimeHandle.Update(ref state);
             this.clipWeightHandle.Update(ref state);
 
             resizeJob.BlendData = this.blendResults;
@@ -79,12 +88,10 @@ namespace BovineLabs.Timeline
             animateUnblendedJob.BlendData = this.blendResults.AsParallelWriter();
             animateUnblendedJob.AnimatedHandle = this.animatedHandle;
             animateUnblendedJob.TrackBindingHandle = this.trackBindingHandle;
-            animateUnblendedJob.LocalTimeHandle = this.localTimeHandle;
 
             accumulateWeightedAnimationJob.BlendData = this.blendResults;
             accumulateWeightedAnimationJob.AnimatedHandle = this.animatedHandle;
             accumulateWeightedAnimationJob.TrackBindingHandle = this.trackBindingHandle;
-            accumulateWeightedAnimationJob.LocalTimeHandle = this.localTimeHandle;
             accumulateWeightedAnimationJob.ClipWeightHandle = this.clipWeightHandle;
 
             state.Dependency = resizeJob.Schedule(state.Dependency);
@@ -94,14 +101,22 @@ namespace BovineLabs.Timeline
             return this.blendResults.AsReadOnly();
         }
 
+        /// <summary>
+        /// Job that resizes and clears the blend data map.
+        /// </summary>
         [BurstCompile]
         public struct ResizeJob : IJob
         {
+            /// <summary>The map used to store blend results.</summary>
             public NativeParallelHashMap<Entity, MixData<T>> BlendData;
 
+            /// <summary>The number of unblended entities.</summary>
             public int UnblendedCount;
+
+            /// <summary>The number of blended entities.</summary>
             public int BlendedCount;
 
+            /// <inheritdoc />
             public void Execute()
             {
                 this.BlendData.Clear();
@@ -112,58 +127,62 @@ namespace BovineLabs.Timeline
             }
         }
 
+        /// <summary>
+        /// Job that writes unblended values for clips without weights.
+        /// </summary>
         [BurstCompile]
         public struct AnimateUnblendedJob : IJobChunk
         {
+            /// <summary>The blend data map to update.</summary>
             public NativeParallelHashMap<Entity, MixData<T>>.ParallelWriter BlendData;
 
+            /// <summary>The animated component handle.</summary>
             public ComponentTypeHandle<TC> AnimatedHandle;
 
+            /// <summary>The track binding handle.</summary>
             [ReadOnly]
             public ComponentTypeHandle<TrackBinding> TrackBindingHandle;
 
-            [ReadOnly]
-            public ComponentTypeHandle<LocalTime> LocalTimeHandle;
-
+            /// <inheritdoc />
             public void Execute(in ArchetypeChunk chunk, int chunkIndexInQuery, bool useEnabledMask, in v128 chunkEnabledMask)
             {
                 var animateds = (TC*)chunk.GetRequiredComponentDataPtrRW(ref this.AnimatedHandle);
                 var trackBindings = (TrackBinding*)chunk.GetRequiredComponentDataPtrRO(ref this.TrackBindingHandle);
-                var localTimes = (LocalTime*)chunk.GetRequiredComponentDataPtrRO(ref this.LocalTimeHandle);
 
                 var e = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
                 while (e.NextEntityIndex(out var entityIndexInChunk))
                 {
                     ref var animated = ref animateds[entityIndexInChunk];
                     ref readonly var trackBinding = ref trackBindings[entityIndexInChunk];
-                    ref readonly var localTime = ref localTimes[entityIndexInChunk];
-                    JobHelpers.AnimateUnblend<T, TC>(trackBinding, ref animated, this.BlendData);
+                    JobHelpers.AnimateUnblend(trackBinding, ref animated, this.BlendData);
                 }
             }
         }
 
+        /// <summary>
+        /// Job that accumulates weighted clip values.
+        /// </summary>
         [BurstCompile]
         public struct AccumulateWeightedAnimationJob : IJobChunk
         {
+            /// <summary>The blend data map to update.</summary>
             public NativeParallelHashMap<Entity, MixData<T>> BlendData;
 
+            /// <summary>The animated component handle.</summary>
             public ComponentTypeHandle<TC> AnimatedHandle;
 
+            /// <summary>The track binding handle.</summary>
             [ReadOnly]
             public ComponentTypeHandle<TrackBinding> TrackBindingHandle;
 
-            [ReadOnly]
-            public ComponentTypeHandle<LocalTime> LocalTimeHandle;
-
+            /// <summary>The clip weight handle.</summary>
             [ReadOnly]
             public ComponentTypeHandle<ClipWeight> ClipWeightHandle;
 
-            [CompilerGenerated]
             public void Execute(in ArchetypeChunk chunk, int chunkIndexInQuery, bool useEnabledMask, in v128 chunkEnabledMask)
             {
                 var animateds = (TC*)chunk.GetRequiredComponentDataPtrRW(ref this.AnimatedHandle);
                 var trackBindings = (TrackBinding*)chunk.GetRequiredComponentDataPtrRO(ref this.TrackBindingHandle);
-                var localTimes = (LocalTime*)chunk.GetRequiredComponentDataPtrRO(ref this.LocalTimeHandle);
                 var clipWeights = (ClipWeight*)chunk.GetRequiredComponentDataPtrRO(ref this.ClipWeightHandle);
 
                 var e = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
@@ -171,10 +190,9 @@ namespace BovineLabs.Timeline
                 {
                     ref var animated = ref animateds[entityIndexInChunk];
                     ref readonly var trackBinding = ref trackBindings[entityIndexInChunk];
-                    ref readonly var localTime = ref localTimes[entityIndexInChunk];
                     ref readonly var clipWeight = ref clipWeights[entityIndexInChunk];
 
-                    JobHelpers.AccumulateWeighted<T, TC>(trackBinding, ref animated, clipWeight, this.BlendData);
+                    JobHelpers.AccumulateWeighted(trackBinding, ref animated, clipWeight, this.BlendData);
                 }
             }
         }

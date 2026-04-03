@@ -55,7 +55,7 @@ namespace BovineLabs.Timeline.Authoring
         /// </summary>
         /// <param name="clip">The timeline clip to create the weight curve from.</param>
         /// <returns>An AnimationCurve representing the clip's weight over time, or null if the clip has no blend weights.</returns>
-        public static AnimationCurve? CreateClipWeightCurve(this TimelineClip? clip)
+        public static AnimationCurve CreateClipWeightCurve(this TimelineClip clip)
         {
             if (clip == null)
             {

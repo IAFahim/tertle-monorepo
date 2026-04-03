@@ -4,6 +4,7 @@
 
 namespace BovineLabs.Timeline.Schedular
 {
+    using BovineLabs.Core;
     using Unity.Entities;
 
     /// <summary>
@@ -12,7 +13,8 @@ namespace BovineLabs.Timeline.Schedular
     /// Contains clock and timer update systems.
     /// </summary>
     [UpdateInGroup(typeof(TimelineSystemGroup))]
-    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor, WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor)]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor | Worlds.Menu,
+        WorldSystemFilterFlags.Default | WorldSystemFilterFlags.Editor | Worlds.Menu)]
     public partial class ScheduleSystemGroup : ComponentSystemGroup
     {
     }

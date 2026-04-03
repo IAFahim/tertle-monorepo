@@ -72,24 +72,24 @@ namespace BovineLabs.Timeline
             {
             }
 
-            private void Execute([EntityIndexInQuery] int entityIndexInQuery, ref LocalTime localTime, in TimerData timerData, in TimeTransform timeTransform,
+            private void Execute([EntityIndexInChunk] int entityIndexInChunk, ref LocalTime localTime, in TimerData timerData, in TimeTransform timeTransform,
                 EnabledRefRW<ClipActive> clipActive)
             {
                 localTime.Value = timeTransform.ToLocalTimeUnbound(timerData.Time);
 
                 if (this.loops != null)
                 {
-                    UpdateLoop(ref localTime, timerData, timeTransform, this.loops[entityIndexInQuery]);
+                    UpdateLoop(ref localTime, timerData, timeTransform, this.loops[entityIndexInChunk]);
                 }
 
                 if (this.pingPongs != null)
                 {
-                    UpdatePingPong(ref localTime, timerData, timeTransform, this.pingPongs[entityIndexInQuery]);
+                    UpdatePingPong(ref localTime, timerData, timeTransform, this.pingPongs[entityIndexInChunk]);
                 }
 
                 if (this.holds != null)
                 {
-                    UpdateHold(ref localTime, timerData, timeTransform, this.holds[entityIndexInQuery]);
+                    UpdateHold(ref localTime, timerData, timeTransform, this.holds[entityIndexInChunk]);
                 }
 
                 clipActive.ValueRW = timeTransform.IsLocalTimeBounded(localTime.Value);

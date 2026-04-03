@@ -1,4 +1,4 @@
-﻿// <copyright file="ConversionContext.cs" company="BovineLabs">
+// <copyright file="ConversionContext.cs" company="BovineLabs">
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
@@ -18,33 +18,38 @@ namespace BovineLabs.Timeline.Authoring
     /// <summary> Relevant information about the current timeline conversion. </summary>
     public struct BakingContext
     {
-        /// <summary> The Conversion System </summary>
+        /// <summary>The baker used for conversion.</summary>
         public readonly IBaker Baker;
 
-        /// <summary> The current timer entity for this conversion </summary>
+        /// <summary>The current timer entity for this conversion.</summary>
         public Entity Timer;
 
-        /// <summary> The target object being converted. This is the top most gameObject with a PlayableDirector component. </summary>
+        /// <summary>The target entity being converted. This is the topmost GameObject with a PlayableDirector component.</summary>
         public Entity Target;
 
-        /// <summary> The entity representing the current track being converted. </summary>
+        /// <summary>The entity representing the current track being converted.</summary>
         public Entity TrackEntity;
 
-        /// <summary> The current playable director being converted. For the top most director, this is the PlayableDirector. </summary>
-        public PlayableDirector? Director;
+        /// <summary>The current playable director being converted. For the topmost director, this is the PlayableDirector.</summary>
+        public PlayableDirector Director;
 
-        /// <summary> The current track being converted </summary>
-        public TrackAsset? Track;
+        /// <summary>The current track being converted.</summary>
+        public TrackAsset Track;
 
-        /// <summary> The current clip being converted </summary>
-        public TimelineClip? Clip;
+        /// <summary>The current clip being converted.</summary>
+        public TimelineClip Clip;
 
-        /// <summary> The current identifier for the track binding. </summary>
-        public Binding? Binding;
+        /// <summary>The current binding for the track.</summary>
+        public Binding Binding;
 
-        /// <summary> Shared values that should be maintained across context copies during conversion. </summary>
+        /// <summary>Shared values that should be maintained across context copies during conversion.</summary>
         public SharedContextValues SharedContextValues;
 
+        /// <summary>Initializes a new instance of the <see cref="BakingContext"/> struct.</summary>
+        /// <param name="baker">The baker used for conversion.</param>
+        /// <param name="timer">The timer entity for the conversion.</param>
+        /// <param name="target">The target entity being converted.</param>
+        /// <param name="director">The root playable director.</param>
         public BakingContext(IBaker baker, Entity timer, Entity target, PlayableDirector director)
         {
             this.Baker = baker;
@@ -86,27 +91,27 @@ namespace BovineLabs.Timeline.Authoring
     /// <summary> Managed object to track values that should be maintained across conversion context copies. </summary>
     public class SharedContextValues
     {
-        /// <summary> The current track priorities. </summary>
+        /// <summary>The current track priorities.</summary>
         public int TrackPriority;
 
-        /// <summary> The current list of clip entities to compile. </summary>
+        /// <summary>The current list of clip entities to bake.</summary>
         public List<(Entity ClipEntity, TimelineClip Clip)> ClipEntities = new();
 
-        /// <summary> Dictionary mapping timer entities to their composite timer components. </summary>
+        /// <summary>Dictionary mapping timer entities to their composite timer components.</summary>
         public readonly Dictionary<Entity, CompositeTimer> CompositeTimers = new();
 
-        /// <summary> List of entities that have timer data components. </summary>
+        /// <summary>List of entities that have timer data components.</summary>
         public readonly List<Entity> TimeDataEntities = new();
 
-        /// <summary> List of entities that link to composite timers. </summary>
+        /// <summary>List of entities that link to composite timers.</summary>
         public readonly List<Entity> CompositeLinkEntities = new();
 
-        /// <summary> List of bindings and their associated binder entities. </summary>
+        /// <summary>List of bindings and their associated binder entities.</summary>
         public readonly List<(Binding Binding, Entity Binder)> BindingToClip = new();
     }
 
     /// <summary>
-    /// Extension methods for BakingContext
+    /// Extension methods for BakingContext.
     /// </summary>
     public static class ConversionContextExtensions
     {
@@ -116,7 +121,7 @@ namespace BovineLabs.Timeline.Authoring
         /// <param name="context">The baking context.</param>
         /// <param name="name">Optional name for the entity.</param>
         /// <returns>The created entity.</returns>
-        public static Entity CreateEntity(this BakingContext context, string? name = null)
+        public static Entity CreateEntity(this BakingContext context, string name = null)
         {
             return context.Baker.CreateAdditionalEntity(TransformUsageFlags.None, false, name);
         }
@@ -194,7 +199,7 @@ namespace BovineLabs.Timeline.Authoring
             var newContext = context;
             newContext.Timer = entity;
 
-            context.SharedContextValues.CompositeTimers.Add(context.Timer, composite);
+            context.SharedContextValues.CompositeTimers[entity] = composite;
 
             return newContext;
         }
@@ -206,7 +211,7 @@ namespace BovineLabs.Timeline.Authoring
         /// <param name="track">The DOTS track to bind.</param>
         /// <param name="trackBinding">The Unity object bound to the track (GameObject or Component).</param>
         /// <returns>A binding object associating the track with its target entity.</returns>
-        public static Binding GetBinding(this BakingContext context, DOTSTrack track, Object? trackBinding)
+        public static Binding GetBinding(this BakingContext context, DOTSTrack track, Object trackBinding)
         {
             var entity = Entity.Null;
 
@@ -260,7 +265,10 @@ namespace BovineLabs.Timeline.Authoring
             return linked;
         }
 
-        /// <summary> Create an entity representing a timeline clip. </summary>
+        /// <summary>Creates an entity representing a timeline clip.</summary>
+        /// <param name="context">The baking context.</param>
+        /// <returns>The created clip entity.</returns>
+        /// <exception cref="ArgumentException">Thrown when the context does not contain a clip.</exception>
         internal static Entity CreateClipEntity(this BakingContext context)
         {
             if (context.Clip == null)

@@ -9,8 +9,19 @@ namespace BovineLabs.Timeline
     using Unity.Entities;
     using Unity.Mathematics;
 
+    /// <summary>
+    /// Helper methods for accumulating and blending animated values.
+    /// </summary>
     public static class JobHelpers
     {
+        /// <summary>
+        /// Writes the unblended value for a track into the blend data.
+        /// </summary>
+        /// <typeparam name="T">The value type being animated.</typeparam>
+        /// <typeparam name="TC">The animated component type.</typeparam>
+        /// <param name="binding">The track binding that identifies the target entity.</param>
+        /// <param name="animatedComponent">The animated component holding the default value.</param>
+        /// <param name="blendData">The blend data map to populate.</param>
         public static void AnimateUnblend<T, TC>(
             in TrackBinding binding, ref TC animatedComponent, NativeParallelHashMap<Entity, MixData<T>>.ParallelWriter blendData)
             where T : unmanaged
@@ -27,6 +38,15 @@ namespace BovineLabs.Timeline
             blendData.TryAdd(binding.Value, mixData);
         }
 
+        /// <summary>
+        /// Accumulates a weighted clip value into the blend data for a track.
+        /// </summary>
+        /// <typeparam name="T">The value type being animated.</typeparam>
+        /// <typeparam name="TC">The animated component type.</typeparam>
+        /// <param name="binding">The track binding that identifies the target entity.</param>
+        /// <param name="animatedComponent">The animated component holding the clip value.</param>
+        /// <param name="c3">The clip weight to apply.</param>
+        /// <param name="blendData">The blend data map to update.</param>
         public static void AccumulateWeighted<T, TC>(
             in TrackBinding binding, ref TC animatedComponent, in ClipWeight c3, NativeParallelHashMap<Entity, MixData<T>> blendData)
             where T : unmanaged
@@ -72,6 +92,15 @@ namespace BovineLabs.Timeline
             blendData[binding.Value] = data;
         }
 
+        /// <summary>
+        /// Blends accumulated values into a final result.
+        /// </summary>
+        /// <typeparam name="T">The value type being blended.</typeparam>
+        /// <typeparam name="TMixer">The mixer implementation used for blending.</typeparam>
+        /// <param name="values">The accumulated mix data.</param>
+        /// <param name="defaultValue">The default value to use when weights do not sum to one.</param>
+        /// <param name="mixer">The mixer used for interpolation and additive blending.</param>
+        /// <returns>The blended value.</returns>
         public static T Blend<T, TMixer>(ref MixData<T> values, in T defaultValue, TMixer mixer = default)
             where T : unmanaged
             where TMixer : unmanaged, IMixer<T>

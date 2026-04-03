@@ -6,13 +6,15 @@ namespace BovineLabs.Timeline.Editor
 {
     using BovineLabs.Timeline.Data;
     using BovineLabs.Timeline.Data.Schedular;
-    using BovineLabs.Timeline.Schedular;
     using Unity.Collections;
     using Unity.Entities;
     using Unity.IntegerTime;
     using UnityEditor.Timeline;
     using UnityEngine;
 
+    /// <summary>
+    /// Editor-only system that synchronizes timeline playback state with Timeline window selection.
+    /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.Editor)]
     [UpdateInGroup(typeof(TimelineSystemGroup), OrderFirst = true)]
     public partial class EditorTimelineSystem : SystemBase
@@ -25,9 +27,13 @@ namespace BovineLabs.Timeline.Editor
             this.EntityManager.AddComponent<TrackResetOnDeactivate>(missingReset);
 
             var isActiveQuery = SystemAPI.QueryBuilder().WithAll<Timer, TimelineActive>().Build();
+            var rootDirectorQuery = SystemAPI.QueryBuilder()
+                .WithAll<Timer, TimelineActive, ClockData>()
+                .WithNone<CompositeTimer>()
+                .Build();
 
             this.ResetActive(isActiveQuery);
-            this.EnableSelected(isActiveQuery);
+            this.EnableSelected(rootDirectorQuery);
         }
 
         private static TimelineWindow[] GetAllOpenEditorWindows()
@@ -55,10 +61,10 @@ namespace BovineLabs.Timeline.Editor
             }
         }
 
-        private void EnableSelected(EntityQuery isActiveQuery)
+        private void EnableSelected(EntityQuery rootDirectorQuery)
         {
             var entities = new NativeList<Entity>(this.WorldUpdateAllocator);
-            var mask = isActiveQuery.GetEntityQueryMask();
+            var mask = rootDirectorQuery.GetEntityQueryMask();
 
             foreach (var w in GetAllOpenEditorWindows())
             {
@@ -75,6 +81,7 @@ namespace BovineLabs.Timeline.Editor
                     continue;
                 }
 
+                entities.Clear();
                 this.EntityManager.Debug.GetEntitiesForAuthoringObject(director, entities);
 
                 foreach (var e in entities)
