@@ -49,9 +49,14 @@ jobs:
           done
 
       - name: Commit and push
+        env:
+          GIT_LFS_SKIP_PUSH: "1"
         run: |
+          # Remove any .lfsconfig to prevent LFS hooks
+          find . -name ".lfsconfig" -delete
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git lfs uninstall 2>/dev/null || true
           git add -A
           git diff --cached --quiet || git commit -m "sync: $(date -u +%Y-%m-%d_%H:%M)"
           git push
