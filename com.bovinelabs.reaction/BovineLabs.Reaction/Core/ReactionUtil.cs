@@ -76,8 +76,8 @@ namespace BovineLabs.Reaction.Core
 
             static bool Between(in EventSubscriber subscriber, BufferLookup<ConditionComparisonValue> values, int value)
             {
-                return value >= values[subscriber.Subscriber][subscriber.ValueIndex.Value].Value &&
-                    value <= values[subscriber.Subscriber][subscriber.ValueIndex.Value].Value;
+                return value >= values[subscriber.Subscriber][subscriber.ValueIndex.Min].Value &&
+                    value <= values[subscriber.Subscriber][subscriber.ValueIndex.Max].Value;
             }
         }
 

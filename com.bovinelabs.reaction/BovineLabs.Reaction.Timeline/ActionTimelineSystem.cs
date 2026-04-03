@@ -127,7 +127,7 @@ namespace BovineLabs.Reaction.Timeline
 
                         foreach (var binding in directorBindings)
                         {
-                            if (binding.TrackIdentifier != bindingTarget.TrackIdentifier)
+                            if (!binding.TrackIdentifier.Equals(bindingTarget.TrackIdentifier))
                             {
                                 continue;
                             }

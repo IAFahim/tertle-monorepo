@@ -20,7 +20,7 @@ namespace BovineLabs.Reaction.Authoring.Conditions
     {
         [Tooltip("All the global conditions registered to this entity. Conditions in this list should only be registered in 1 place to 1 entity.")]
         [SerializeField]
-        private ConditionSchemaObject?[] conditions = Array.Empty<ConditionSchemaObject?>();
+        private ConditionSchemaObject[] conditions = Array.Empty<ConditionSchemaObject>();
 
         /// <summary>
         /// Baker for <see cref="ConditionGlobalAuthoring"/>.

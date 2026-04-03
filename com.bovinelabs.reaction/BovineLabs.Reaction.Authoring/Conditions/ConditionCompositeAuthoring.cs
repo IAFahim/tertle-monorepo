@@ -269,7 +269,7 @@ namespace BovineLabs.Reaction.Authoring.Conditions
                 /// Child nodes for compound expressions (And, Or, Xor, Not).
                 /// Null for Condition nodes, contains operands for other node types.
                 /// </summary>
-                public List<ExpressionNode>? Children;
+                public List<ExpressionNode> Children;
 
                 /// <summary>
                 /// Defines the type of expression node in the abstract syntax tree.

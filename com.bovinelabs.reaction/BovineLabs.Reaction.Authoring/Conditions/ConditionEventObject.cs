@@ -4,6 +4,8 @@
 
 namespace BovineLabs.Reaction.Authoring.Conditions
 {
+    using System;
+    using BovineLabs.Core;
     using BovineLabs.Core.ObjectManagement;
     using BovineLabs.Core.PropertyDrawers;
     using BovineLabs.Reaction.Data.Conditions;
@@ -17,6 +19,9 @@ namespace BovineLabs.Reaction.Authoring.Conditions
     public sealed class ConditionEventObject : ConditionSchemaObject, IUID
     {
         [SerializeField]
+        private TypeAsset customDataType;
+
+        [SerializeField]
         [InspectorReadOnly]
         private ConditionKey key;
 
@@ -29,6 +34,8 @@ namespace BovineLabs.Reaction.Authoring.Conditions
         /// <inheritdoc/>
         public override string ConditionType => ConditionTypes.EventType;
 
+        public Type CustomDataType => this.customDataType ? this.customDataType.ResolveType() : null;
+
         /// <inheritdoc/>
         int IUID.ID
         {
@@ -36,7 +43,7 @@ namespace BovineLabs.Reaction.Authoring.Conditions
             set => this.key = value;
         }
 
-        public static implicit operator ConditionKey(ConditionEventObject? obj)
+        public static implicit operator ConditionKey(ConditionEventObject obj)
         {
             return obj ? obj.key : ConditionKey.Null;
         }

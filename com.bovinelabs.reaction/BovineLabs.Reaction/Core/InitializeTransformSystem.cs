@@ -15,6 +15,7 @@ namespace BovineLabs.Reaction.Core
     using Unity.Burst.CompilerServices;
     using Unity.Burst.Intrinsics;
     using Unity.Collections;
+    using Unity.Collections.LowLevel.Unsafe;
     using Unity.Entities;
     using Unity.Mathematics;
     using Unity.Transforms;
@@ -108,8 +109,10 @@ namespace BovineLabs.Reaction.Core
             [ReadOnly]
             public EntityTypeHandle EntityHandle;
 
+            [NativeDisableContainerSafetyRestriction]
             public ComponentTypeHandle<LocalTransform> LocalTransformHandle;
 
+            [NativeDisableContainerSafetyRestriction]
             public ComponentTypeHandle<LocalToWorld> LocalToWorldHandle;
 
             [ReadOnly]

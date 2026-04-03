@@ -19,7 +19,7 @@ namespace BovineLabs.Reaction.Data.Conditions
         [FieldOffset(0)]
         public byte Min;
 
-        [FieldOffset(4)]
+        [FieldOffset(1)]
         public byte Max;
     }
 }

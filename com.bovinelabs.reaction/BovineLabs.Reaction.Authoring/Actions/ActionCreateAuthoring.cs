@@ -31,7 +31,7 @@ namespace BovineLabs.Reaction.Authoring.Actions
         [Serializable]
         public class Data
         {
-            public ObjectDefinition? Definition;
+            public ObjectDefinition Definition;
 
             public Target Target = Target.Target;
 

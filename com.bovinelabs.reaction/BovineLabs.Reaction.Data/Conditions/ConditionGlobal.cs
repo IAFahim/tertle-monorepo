@@ -1,4 +1,4 @@
-﻿// <copyright file="GlobalCondition.cs" company="BovineLabs">
+﻿// <copyright file="ConditionGlobal.cs" company="BovineLabs">
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
@@ -24,7 +24,7 @@ namespace BovineLabs.Reaction.Data.Conditions
             return this.Key == other.Key && this.ConditionType == other.ConditionType;
         }
 
-        public override bool Equals(object? obj)
+        public override bool Equals(object obj)
         {
             return obj is ConditionGlobal other && this.Equals(other);
         }

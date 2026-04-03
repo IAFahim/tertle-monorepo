@@ -155,7 +155,7 @@ namespace BovineLabs.Reaction.Authoring.Conditions
 
         private static bool AddValue(
             ref ValueIndex valueIndex, IBaker baker, Dictionary<Type, object> bakedData, NativeList<int> eventValues,
-            ConditionData.ConditionComparisonMode comparisonMode, int value, ICustomComparison? customComparison)
+            ConditionData.ConditionComparisonMode comparisonMode, int value, ICustomComparison customComparison)
         {
             valueIndex.Value = (byte)eventValues.Length;
 
@@ -188,7 +188,7 @@ namespace BovineLabs.Reaction.Authoring.Conditions
         {
             public string Name = string.Empty;
 
-            public ConditionSchemaObject? Condition;
+            public ConditionSchemaObject Condition;
 
             [Tooltip("What should the effect look at for its conditions when created? Usually Target or Owner.")]
             public Target Target = Target.Target;
@@ -198,19 +198,19 @@ namespace BovineLabs.Reaction.Authoring.Conditions
             public ConditionComparisonMode ComparisonMode = ConditionComparisonMode.Constant;
             public int Value;
             [SerializeReference]
-            public ICustomComparison? CustomValue;
+            public ICustomComparison CustomValue;
 
             [Header("Min")]
             public ConditionComparisonMode MinComparisonMode = ConditionComparisonMode.Constant;
             public int ValueMin;
             [SerializeReference]
-            public ICustomComparison? CustomValueMin;
+            public ICustomComparison CustomValueMin;
 
             [Header("Max")]
             public ConditionComparisonMode MaxComparisonMode = ConditionComparisonMode.Constant;
             public int ValueMax;
             [SerializeReference]
-            public ICustomComparison? CustomValueMax;
+            public ICustomComparison CustomValueMax;
 
             [Header("Features")]
             [Tooltip("Invalid - Using this is an error.\n\n" + "Condition - Condition will be used in ConditionActive to check if active.\n\n" +

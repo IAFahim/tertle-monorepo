@@ -295,7 +295,8 @@ namespace BovineLabs.Reaction.Tests.Conditions
         private Entity CreateEventSubscriberEntity()
         {
             var archetype = this.Manager.CreateArchetype(
-                typeof(ConditionActive));
+                typeof(ConditionActive),
+                typeof(ConditionComparisonValue));
 
             var entity = this.Manager.CreateEntity(archetype);
             this.Manager.SetComponentData(entity, new ConditionActive { Value = new BitArray32(0) });
@@ -307,6 +308,7 @@ namespace BovineLabs.Reaction.Tests.Conditions
         {
             var archetype = this.Manager.CreateArchetype(
                 typeof(ConditionActive),
+                typeof(ConditionComparisonValue),
                 typeof(ConditionReset));
 
             var entity = this.Manager.CreateEntity(archetype);
@@ -322,6 +324,7 @@ namespace BovineLabs.Reaction.Tests.Conditions
         {
             var archetype = this.Manager.CreateArchetype(
                 typeof(ConditionActive),
+                typeof(ConditionComparisonValue),
                 typeof(ConditionValues));
 
             var entity = this.Manager.CreateEntity(archetype);
@@ -338,7 +341,7 @@ namespace BovineLabs.Reaction.Tests.Conditions
 
         private void AddEventSubscriber(Entity publisherEntity, Entity subscriberEntity, ushort eventKey, byte conditionIndex, Equality operation, int value)
         {
-            var comparisonValues = this.Manager.GetBuffer<ConditionComparisonValue>(publisherEntity);
+            var comparisonValues = this.Manager.GetBuffer<ConditionComparisonValue>(subscriberEntity);
             var valueIndex = (byte)comparisonValues.Length;
             comparisonValues.Add(new ConditionComparisonValue { Value = value });
 
@@ -357,7 +360,7 @@ namespace BovineLabs.Reaction.Tests.Conditions
 
         private void AddEventSubscriberWithFeature(Entity publisherEntity, Entity subscriberEntity, ushort eventKey, byte conditionIndex, ConditionFeature feature, Equality operation, int value)
         {
-            var comparisonValues = this.Manager.GetBuffer<ConditionComparisonValue>(publisherEntity);
+            var comparisonValues = this.Manager.GetBuffer<ConditionComparisonValue>(subscriberEntity);
             var valueIndex = (byte)comparisonValues.Length;
             comparisonValues.Add(new ConditionComparisonValue { Value = value });
 

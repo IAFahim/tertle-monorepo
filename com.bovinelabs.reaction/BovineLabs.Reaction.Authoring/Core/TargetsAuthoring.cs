@@ -19,9 +19,9 @@ namespace BovineLabs.Reaction.Authoring.Core
     [DisallowMultipleComponent]
     public class TargetsAuthoring : MonoBehaviour, ILookupAuthoring<InitializeTarget, InitializeTarget.Data>
     {
-        public GameObject? Owner;
-        public GameObject? Source;
-        public GameObject? Target;
+        public GameObject Owner;
+        public GameObject Source;
+        public GameObject Target;
 
         public TargetsCustomAuthoring Custom = new();
 
@@ -72,8 +72,8 @@ namespace BovineLabs.Reaction.Authoring.Core
         public class TargetsCustomAuthoring
         {
             public bool Enable;
-            public GameObject? Target0;
-            public GameObject? Target1;
+            public GameObject Target0;
+            public GameObject Target1;
         }
 
         private class Baker : Baker<TargetsAuthoring>
@@ -98,7 +98,7 @@ namespace BovineLabs.Reaction.Authoring.Core
                 AddComponents(this, entity, owner, source, target, authoring.Custom.Enable, target0, target1);
             }
 
-            private Entity GetEntityOrDefaultRoot(TargetsAuthoring authoring, GameObject? field)
+            private Entity GetEntityOrDefaultRoot(TargetsAuthoring authoring, GameObject field)
             {
                 var entity = this.GetEntity(field, TransformUsageFlags.None);
                 if (entity == Entity.Null)

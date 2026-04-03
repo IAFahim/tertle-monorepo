@@ -5,7 +5,7 @@
 namespace BovineLabs.Reaction.Timeline.Data
 {
     using BovineLabs.Reaction.Data.Core;
-    using Unity.Collections;
+    using BovineLabs.Timeline.Data;
     using Unity.Entities;
 
     [InternalBufferCapacity(0)]
@@ -13,6 +13,6 @@ namespace BovineLabs.Reaction.Timeline.Data
     {
         public byte Index;
         public Target Target;
-        public FixedString64Bytes TrackIdentifier;
+        public TrackId TrackIdentifier;
     }
 }

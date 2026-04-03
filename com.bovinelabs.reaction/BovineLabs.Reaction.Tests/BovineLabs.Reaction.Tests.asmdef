@@ -1,37 +1,42 @@
-{
+﻿{
   "name": "BovineLabs.Reaction.Tests",
   "rootNamespace": "",
   "references": [
-      "BovineLabs.Core",
-      "BovineLabs.Core.Authoring",
-      "BovineLabs.Core.Extensions",
-      "BovineLabs.Reaction",
-      "BovineLabs.Reaction.Authoring",
-      "BovineLabs.Reaction.Data",
-      "BovineLabs.Testing",
-      "Unity.Burst",
-      "Unity.Collections",
-      "Unity.Entities",
-      "Unity.Entities.Graphics",
-      "Unity.Entities.Hybrid",
-      "Unity.InputSystem",
-      "Unity.Mathematics",
-      "Unity.Mathematics.Extensions",
-      "Unity.PerformanceTesting",
-      "Unity.Physics",
-      "Unity.Transforms",
-      "Unity.Transforms.Hybrid"
-  ],
-  "optionalUnityReferences": [
-    "TestAssemblies"
+    "BovineLabs.Core",
+    "BovineLabs.Core.Authoring",
+    "BovineLabs.Core.Extensions",
+    "BovineLabs.Reaction",
+    "BovineLabs.Reaction.Authoring",
+    "BovineLabs.Reaction.Data",
+    "BovineLabs.Testing",
+    "Unity.Burst",
+    "Unity.Collections",
+    "Unity.Entities",
+    "Unity.Entities.Graphics",
+    "Unity.Entities.Hybrid",
+    "Unity.InputSystem",
+    "Unity.Mathematics",
+    "Unity.Mathematics.Extensions",
+    "Unity.PerformanceTesting",
+    "Unity.Physics",
+    "Unity.Transforms",
+    "Unity.Transforms.Hybrid",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
   ],
   "includePlatforms": [
-      "Editor"
+    "Editor"
   ],
   "excludePlatforms": [],
   "allowUnsafeCode": true,
   "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
   "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
   "versionDefines": [],
   "noEngineReferences": false
 }

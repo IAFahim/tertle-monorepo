@@ -36,7 +36,7 @@ namespace BovineLabs.Reaction.Authoring.Actions
         {
             public Target Target = Target.Target;
 
-            public EnableableComponentAsset? Enableable;
+            public EnableableComponentAsset Enableable;
         }
 
         private class Baker : Baker<ActionEnableableAuthoring>
