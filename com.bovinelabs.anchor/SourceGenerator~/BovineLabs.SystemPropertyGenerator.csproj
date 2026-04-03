@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <RootNamespace>BovineLabs.SystemPropertyGenerator</RootNamespace>
+        <LangVersion>9</LangVersion>
+        <PackageId>BovineLabs.SystemPropertyGenerator</PackageId>
+        <AssemblyName>BovineLabs.SystemPropertyGenerator</AssemblyName>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <OutDir>..\BovineLabs.Anchor\SourceGenerators\</OutDir>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <OutDir>..\BovineLabs.Anchor\SourceGenerators\</OutDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="CodeGenHelpers">
+        <HintPath>..\..\com.bovinelabs.core\BovineLabs.Core\CodeGenHelpers\CodeGenHelpers.dll</HintPath>
+        <Private>false</Private>
+      </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+      <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+    </ItemGroup>
+
+</Project>

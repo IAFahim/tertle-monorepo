@@ -1,0 +1,5 @@
+<UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement class="search-field-container">
+    </ui:VisualElement>
+    <ui:VisualElement class="entity-inspector-components-tab__content"/>
+</UXML>

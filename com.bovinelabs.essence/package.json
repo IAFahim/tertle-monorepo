@@ -1,0 +1,17 @@
+{
+  "name": "com.bovinelabs.essence",
+  "description": "Essence is a stat library designed to work with the Reaction library for Unity DOTS.",
+  "version": "0.3.0",
+  "unity": "6000.0",
+  "displayName": "BovineLabs Essence",
+  "dependencies": {
+    "com.bovinelabs.core": "1.4.4",
+    "com.bovinelabs.reaction": "0.5.0"
+  },
+  "keywords": [
+    "DOTS", "Entities", "ECS", "Stats", "Essence"
+  ],
+  "author": {
+    "name": "BovineLabs"
+  }
+}

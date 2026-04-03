@@ -1,0 +1,18 @@
+{
+  "name": "com.bovinelabs.core",
+  "description": "Core library for building games with DOTS.",
+  "version": "1.6.1",
+  "unity": "6000.3",
+  "displayName": "BovineLabs Core",
+  "dependencies": {
+    "com.unity.entities": "1.4.5"
+  },
+  "keywords": [
+    "DOTS",
+    "Entities",
+    "ECS"
+  ],
+  "author": {
+    "name": "BovineLabs"
+  }
+}

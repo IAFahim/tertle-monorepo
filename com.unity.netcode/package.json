@@ -1,0 +1,12 @@
+{
+  "name": "com.unity.netcode",
+  "displayName": "Netcode for Entities",
+  "version": "6.6.0",
+  "description": "Unity's Data Oriented Technology Stack (DOTS) multiplayer netcode layer - a high level netcode system built on entities. This package provides a foundation for creating networked multiplayer applications within DOTS.",
+  "dependencies": {
+    "com.unity.transport": "6.5.0",
+    "com.unity.entities": "6.5.0",
+    "com.unity.modules.animation": "1.0.0"
+  },
+  "_fingerprint": "5b130122d2e860922e53a942337bda055fd0bfdb"
+}

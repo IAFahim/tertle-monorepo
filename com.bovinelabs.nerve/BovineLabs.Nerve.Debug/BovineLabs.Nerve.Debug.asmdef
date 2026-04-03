@@ -1,0 +1,41 @@
+{
+  "name": "BovineLabs.Nerve.Debug",
+  "rootNamespace": "",
+  "references": [
+    "BovineLabs.Anchor",
+    "BovineLabs.Core",
+    "BovineLabs.Core.Extensions",
+    "BovineLabs.Nerve",
+    "BovineLabs.Nerve.Data",
+    "Unity.AppUI",
+    "Unity.AppUI.MVVM",
+    "Unity.Burst",
+    "Unity.Collections",
+    "Unity.Entities",
+    "Unity.Entities.Graphics",
+    "Unity.Entities.Hybrid",
+    "Unity.InputSystem",
+    "Unity.Mathematics",
+    "Unity.Mathematics.Extensions",
+    "Unity.NetCode",
+    "Unity.Networking.Transport",
+    "Unity.Physics",
+    "Unity.Transforms"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": true,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_EDITOR || BL_DEBUG"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.unity.netcode",
+      "expression": "",
+      "define": "UNITY_NETCODE"
+    }],
+  "noEngineReferences": false
+}

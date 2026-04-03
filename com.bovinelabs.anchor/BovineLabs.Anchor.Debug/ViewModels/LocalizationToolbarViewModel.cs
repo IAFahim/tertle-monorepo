@@ -1,0 +1,71 @@
+﻿// <copyright file="LocalizationToolbarViewModel.cs" company="BovineLabs">
+//     Copyright (c) BovineLabs. All rights reserved.
+// </copyright>
+
+#if UNITY_LOCALIZATION
+namespace BovineLabs.Anchor.Debug.ViewModels
+{
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Linq;
+    using BovineLabs.Anchor.MVVM;
+    using Unity.Properties;
+    using UnityEngine.Localization;
+    using UnityEngine.Localization.Settings;
+
+    public class LocalizationToolbarViewModel : ObservableObject
+    {
+        private int selectedLocale = -1;
+
+        private List<string> locales = new();
+
+        [CreateProperty]
+        public int SelectedLocale
+        {
+            get => this.selectedLocale;
+            set => this.SetProperty(ref this.selectedLocale, value);
+        }
+
+        [CreateProperty]
+        public List<string> Locales
+        {
+            get => this.locales;
+            set => this.SetProperty(ref this.locales, value);
+        }
+
+        public LocalizationToolbarViewModel()
+        {
+            if (!LocalizationSettings.HasSettings)
+            {
+                return;
+            }
+
+            this.PropertyChanged += this.OnPropertyChanged;
+
+            LocalizationSettings.InitializationOperation.Completed += _ =>
+            {
+                this.Locales = new List<string>(LocalizationSettings.AvailableLocales.Locales.Select(s => s.ToString()));
+
+                var locale = LocalizationSettings.SelectedLocale;
+                this.SelectedLocale = locale != null ? this.Locales.IndexOf(locale.ToString()) : -1;
+
+                LocalizationSettings.SelectedLocaleChanged += this.OnSelectedLocaleChanged;
+            };
+        }
+
+        private void OnPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(this.SelectedLocale))
+            {
+                LocalizationSettings.SelectedLocale = this.SelectedLocale != -1 ? LocalizationSettings.AvailableLocales.Locales[this.SelectedLocale] : null;
+            }
+        }
+
+        private void OnSelectedLocaleChanged(Locale obj)
+        {
+            this.SelectedLocale = this.Locales.IndexOf(LocalizationSettings.SelectedLocale.ToString());
+        }
+    }
+}
+#endif
+

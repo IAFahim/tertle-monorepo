@@ -1,0 +1,17 @@
+{
+  "name": "com.bovinelabs.nerve",
+  "description": "Net",
+  "version": "0.1.0",
+  "unity": "6000.1",
+  "displayName": "BovineLabs Nerve",
+  "dependencies": {
+    "com.bovinelabs.core": "1.4.3"
+  },
+  "keywords": [
+    "Entities",
+    "NetCode"
+  ],
+  "author": {
+    "name": "BovineLabs"
+  }
+}

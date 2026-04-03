@@ -1,0 +1,16 @@
+{
+  "name": "com.bovinelabs.reaction",
+  "description": "Reaction is a framework for developing Unity DOTS applications that is designed on the concept of Conditions and Actions.",
+  "version": "0.6.0",
+  "unity": "6000.0",
+  "displayName": "BovineLabs Reaction",
+  "dependencies": {
+    "com.bovinelabs.core": "1.4.6"
+  },
+  "keywords": [
+    "DOTS", "Entities", "ECS"
+  ],
+  "author": {
+    "name": "BovineLabs"
+  }
+}

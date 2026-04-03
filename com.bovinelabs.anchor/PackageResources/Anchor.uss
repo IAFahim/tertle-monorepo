@@ -1,0 +1,35 @@
+:root {
+    /* Workaround for missing font in build when using the name Inter-Regular */
+    --appui-font-weights-100: url("Inter-Normal.ttf");
+}
+
+.appui {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.appui-navhost__container > .appui-navhost__item {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.bl-horizontal {
+    flex-direction: row;
+}
+
+.bl-toolbar__menu-container {
+    flex-grow: 1;
+}
+
+/* TouchSlider overflow workaround.
+   Keep AppUI classes/styling and only remove overflow clipping on our replacement controls. */
+.appui-touchslider.bl-touchslider-workaround {
+    overflow: visible;
+}
+
+.bl-option-pager__center {
+    margin-left: var(--appui-alias-control-gap-md, 8px);
+    margin-right: var(--appui-alias-control-gap-md, 8px);
+}
+
+.bl-option-pager__indicator {
+    margin-top: var(--appui-alias-control-gap-sm, 4px);
+}

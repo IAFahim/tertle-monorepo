@@ -1,0 +1,3 @@
+﻿.bl-client-network-tab .bl-key-value-group__right {
+    min-width: var(--appui-sizing-1250);
+}

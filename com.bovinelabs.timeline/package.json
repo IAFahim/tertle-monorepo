@@ -1,0 +1,26 @@
+{
+  "name": "com.bovinelabs.timeline",
+  "description": "Timeline wrapper for DOTS.",
+  "version": "0.2.0",
+  "unity": "6000.0",
+  "displayName": "BovineLabs Timeline",
+  "dependencies": {
+    "com.bovinelabs.core": "1.3.6",
+    "com.unity.timeline": "1.8.6"
+  },
+  "keywords": [
+    "DOTS",
+    "Entities",
+    "ECS"
+  ],
+  "author": {
+    "name": "BovineLabs"
+  },
+  "samples": [
+    {
+      "displayName": "Sample",
+      "description": "Simple sample including a sub director. This includes the Tracks sample.",
+      "path": "Sample~"
+    }
+  ]
+}

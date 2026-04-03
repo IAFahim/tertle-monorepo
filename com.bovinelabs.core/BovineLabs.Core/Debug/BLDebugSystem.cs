@@ -1,0 +1,59 @@
+﻿// <copyright file="BLDebugSystem.cs" company="BovineLabs">
+//     Copyright (c) BovineLabs. All rights reserved.
+// </copyright>
+
+#if UNITY_EDITOR || BL_DEBUG
+#define BL_DEBUG_UPDATE
+#endif
+
+namespace BovineLabs.Core
+{
+    using BovineLabs.Core.ConfigVars;
+    using BovineLabs.Core.Extensions;
+    using BovineLabs.Core.Utility;
+    using Unity.Burst;
+    using Unity.Collections;
+    using Unity.Entities;
+    using Unity.Mathematics;
+
+    [Configurable]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.ThinClientSimulation | WorldSystemFilterFlags.Editor)]
+    [UpdateInGroup(typeof(InitializationSystemGroup), OrderFirst = true)]
+    public partial class BLDebugSystem : InitSystemBase
+    {
+        private const int DefaultMinLength = 0;
+
+        [ConfigVar("debug.loglevel.min-world-length", DefaultMinLength, "The min length of the world name, useful for alignment.")]
+        private static readonly SharedStatic<int> MinWorldLength = SharedStatic<int>.GetOrCreate<BLDebugSystem>();
+
+        internal static void Create(World world)
+        {
+            var entity = world.EntityManager.CreateEntity<BLLogger>("BL Logger");
+
+            var worldName = world.Name.TrimEnd("World").TrimEnd();
+
+            var maxLength = FixedString32Bytes.UTF8MaxLengthInBytes;
+            var minLength = math.min(MinWorldLength.Data, maxLength);
+
+            // Apply size limits
+            worldName = worldName.Length > maxLength ? worldName[..maxLength] : worldName;
+            worldName = worldName.PadRight(minLength);
+
+            world.EntityManager.SetComponentData(entity, new BLLogger { World = worldName });
+        }
+
+        /// <inheritdoc />
+        protected override void OnCreate()
+        {
+            Create(this.World);
+        }
+
+        /// <inheritdoc/>
+        protected override void OnUpdate()
+        {
+            var frameCount = UnityEngine.Time.frameCount;
+            this.World.EntityManager.GetSingletonRW<BLLogger>().ValueRW.Frame = frameCount;
+            BLGlobalLogger.Frame.Data = frameCount;
+        }
+    }
+}
