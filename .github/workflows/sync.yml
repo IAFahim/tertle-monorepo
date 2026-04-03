@@ -37,7 +37,7 @@ jobs:
             "com.bovinelabs.timeline:1.0.0"
             "com.bovinelabs.essence:main"
             "com.bovinelabs.nerve:main"
-            "com.bovinelabs.reaction:main"
+            "com.bovinelabs.reaction:2.0"
           )
           for entry in "${REPOS[@]}"; do
             repo="${entry%%:*}"
