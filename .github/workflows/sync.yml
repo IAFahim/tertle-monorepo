@@ -34,7 +34,7 @@ jobs:
             "com.bovinelabs.recast:main"
             "com.bovinelabs.anchor:main"
             "com.bovinelabs.bridge:main"
-            "com.bovinelabs.timeline:main"
+            "com.bovinelabs.timeline:1.0.0"
             "com.bovinelabs.essence:main"
             "com.bovinelabs.nerve:main"
             "com.bovinelabs.reaction:main"
