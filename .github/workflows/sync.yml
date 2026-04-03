@@ -25,6 +25,8 @@ jobs:
           done
 
       - name: Clone all tertle repos
+        env:
+          GIT_LFS_SKIP_SMUDGE: "1"
         run: |
           # Format: "repo_name:branch_or_tag"
           REPOS=(
