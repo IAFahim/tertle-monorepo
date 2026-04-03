@@ -46,9 +46,9 @@ jobs:
             # Remove .gitattributes and .lfsconfig
             find "$repo" -name ".gitattributes" -delete
             find "$repo" -name ".lfsconfig" -delete
-            # Remove LFS pointer stubs (files starting with 'version https://git-lfs')
-            find "$repo" -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.pdf" -o -name "*.psd" -o -name "*.aiff" -o -name "*.tiff" -o -name "*.tif" -o -name "*.bmp" -o -name "*.exe" -o -name "*.dll" -o -name "*.so" -o -name "*.zip" -o -name "*.tar" -o -name "*.gz" | while read f; do
-              if head -c 40 "$f" | grep -q '^version https://git-lfs'; then
+            # Remove LFS pointer stubs - scan all files for LFS header
+            find "$repo" -type f | while read f; do
+              if head -c 40 "$f" 2>/dev/null | grep -q '^version https://git-lfs'; then
                 rm "$f"
               fi
             done
