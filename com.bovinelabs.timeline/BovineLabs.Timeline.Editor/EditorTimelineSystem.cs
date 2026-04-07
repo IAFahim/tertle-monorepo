@@ -10,7 +10,6 @@ namespace BovineLabs.Timeline.Editor
     using Unity.Entities;
     using Unity.IntegerTime;
     using UnityEditor.Timeline;
-    using UnityEngine;
 
     /// <summary>
     /// Editor-only system that synchronizes timeline playback state with Timeline window selection.
@@ -36,11 +35,6 @@ namespace BovineLabs.Timeline.Editor
             this.EnableSelected(rootDirectorQuery);
         }
 
-        private static TimelineWindow[] GetAllOpenEditorWindows()
-        {
-            return Resources.FindObjectsOfTypeAll<TimelineWindow>();
-        }
-
         private void Disable(Entity entity)
         {
             this.EntityManager.SetComponentEnabled<TimelineActive>(entity, false);
@@ -63,43 +57,46 @@ namespace BovineLabs.Timeline.Editor
 
         private void EnableSelected(EntityQuery rootDirectorQuery)
         {
+            var w = TimelineWindow.instance;
+
+            if (w == null)
+            {
+                return;
+            }
+
+            if (w.state?.masterSequence?.director == null)
+            {
+                return;
+            }
+
+            var director = w.state.masterSequence.director;
+
+            if (director.time >= director.duration || director.time <= 0)
+            {
+                // If outside window, allow it to remain disabled
+                return;
+            }
+
             var entities = new NativeList<Entity>(this.WorldUpdateAllocator);
+            this.EntityManager.Debug.GetEntitiesForAuthoringObject(director, entities);
+
             var mask = rootDirectorQuery.GetEntityQueryMask();
 
-            foreach (var w in GetAllOpenEditorWindows())
+            foreach (var e in entities)
             {
-                if (w.state?.masterSequence?.director == null)
+                if (!mask.MatchesIgnoreFilter(e))
                 {
                     continue;
                 }
 
-                var director = w.state.masterSequence.director;
-
-                if (director.time >= director.duration || director.time <= 0)
+                this.EntityManager.SetComponentEnabled<TimelineActive>(e, true);
+                this.EntityManager.SetComponentData(e, new Timer
                 {
-                    // If outside window, allow it to remain disabled
-                    continue;
-                }
+                    Time = new DiscreteTime(director.time),
+                    TimeScale = 1,
+                });
 
-                entities.Clear();
-                this.EntityManager.Debug.GetEntitiesForAuthoringObject(director, entities);
-
-                foreach (var e in entities)
-                {
-                    if (!mask.MatchesIgnoreFilter(e))
-                    {
-                        continue;
-                    }
-
-                    this.EntityManager.SetComponentEnabled<TimelineActive>(e, true);
-                    this.EntityManager.SetComponentData(e, new Timer
-                    {
-                        Time = new DiscreteTime(director.time),
-                        TimeScale = 1,
-                    });
-
-                    break;
-                }
+                break;
             }
         }
     }
