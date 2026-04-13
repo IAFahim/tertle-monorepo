@@ -1,0 +1,27 @@
+[
+    {
+        "id": "bl-core-config-vars",
+        "displayName": "Core - Config Var",
+        "description": "Use for ConfigVars, including declaration, manager wiring, initialization behavior, and editor window bindings."
+    },
+    {
+        "id": "bl-core-inspectors",
+        "displayName": "Core - Inspectors",
+        "description": "Use for custom inspectors and property drawers, including ElementEditor, ElementProperty, and prefab-aware inspector behavior."
+    },
+    {
+        "id": "bl-core-lifecycle",
+        "displayName": "Core - Lifecycle",
+        "description": "Use for lifecycle initialization and destruction flows, including InitializeEntity, InitializeSubSceneEntity, DestroyEntity, and system-group ordering."
+    },
+    {
+        "id": "bl-core-object-management",
+        "displayName": "Core - Object Management",
+        "description": "Use for object management workflows, including ObjectDefinition and ObjectGroup authoring, LookupAuthoring baking, AutoRef processing, and runtime registries."
+    },
+    {
+        "id": "bl-core-settings",
+        "displayName": "Core - Settings",
+        "description": "Use for settings assets and retrieval paths, including ISettings, SettingsBase, SettingsSingleton, world routing, and build-time setup."
+    }
+]

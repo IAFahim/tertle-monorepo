@@ -17,13 +17,13 @@ namespace BovineLabs.Core.ObjectManagement
     [Serializable]
     public readonly struct ObjectId : IComponentData, IEquatable<ObjectId>, IComparable<ObjectId>
     {
-        public static readonly ObjectId Null = default;
+        public const int MaxModsIds = 1 << ModBytes;
 
         private const int ModBytes = 10;
         private const int ModShift = 32 - ModBytes;
         private const int IDMask = (1 << ModShift) - 1;
 
-        public const int MaxModsIds = 1 << ModBytes;
+        public static readonly ObjectId Null = default;
 
         [CreateProperty(ReadOnly = true)]
         private readonly int rawValue;
@@ -44,6 +44,8 @@ namespace BovineLabs.Core.ObjectManagement
 
             this.rawValue = mod << ModShift | id;
         }
+
+        public int RawValue => this.rawValue;
 
         [CreateProperty]
         public ushort Mod => (ushort)(this.rawValue >> ModShift);
