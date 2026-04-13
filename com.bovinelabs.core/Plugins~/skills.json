@@ -23,5 +23,20 @@
         "id": "bl-core-settings",
         "displayName": "Core - Settings",
         "description": "Use for settings assets and retrieval paths, including ISettings, SettingsBase, SettingsSingleton, world routing, and build-time setup."
+    },
+    {
+        "id": "bl-core-pause",
+        "displayName": "Core - Pause",
+        "description": "Use for pause behavior, including PauseGame, IUpdateWhilePaused and IDisableWhilePaused markers, PauseUtility overrides, and pause-aware system groups."
+    },
+    {
+        "id": "bl-core-subscenes",
+        "displayName": "Core - SubScenes",
+        "description": "Use for subscene loading workflows, including SubSceneSettings and SubSceneSet authoring, world targeting, runtime load state, asset loading, and editor tooling."
+    },
+    {
+        "id": "bl-core-system-groups",
+        "displayName": "Core - System Groups",
+        "description": "Use for core system-group placement and ordering, including BeforeScene and AfterScene, BeginSimulation, transform groups, relevancy, and pause-aware simulation roots."
     }
 ]
