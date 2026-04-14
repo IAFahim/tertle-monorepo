@@ -38,5 +38,15 @@
         "id": "bl-core-system-groups",
         "displayName": "Core - System Groups",
         "description": "Use for core system-group placement and ordering, including BeforeScene and AfterScene, BeginSimulation, transform groups, relevancy, and pause-aware simulation roots."
+    },
+    {
+        "id": "bl-core-entity-commands",
+        "displayName": "Core - Entity Commands",
+        "description": "Use for IEntityCommands workflows, including reusable builder methods across BakerCommands, command buffers, parallel jobs, and EntityManager-based tests or editor setup."
+    },
+    {
+        "id": "bl-core-states",
+        "displayName": "Core - States",
+        "description": "Use for state workflows, including StateModel and StateFlagModel variants, StateAPI.Register, history support, and enableable-state behavior."
     }
 ]
