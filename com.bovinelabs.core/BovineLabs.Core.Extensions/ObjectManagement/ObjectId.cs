@@ -15,7 +15,7 @@ namespace BovineLabs.Core.ObjectManagement
     /// that can be instantiated at runtime via <see cref="ObjectDefinitionRegistry" />.
     /// </summary>
     [Serializable]
-    public readonly struct ObjectId : IComponentData, IEquatable<ObjectId>, IComparable<ObjectId>
+    public struct ObjectId : IComponentData, IEquatable<ObjectId>, IComparable<ObjectId>
     {
         public const int MaxModsIds = 1 << ModBytes;
 
@@ -25,8 +25,7 @@ namespace BovineLabs.Core.ObjectManagement
 
         public static readonly ObjectId Null = default;
 
-        [CreateProperty(ReadOnly = true)]
-        private readonly int rawValue;
+        public int RawValue;
 
         public ObjectId(int id, ushort mod = 0)
         {
@@ -42,16 +41,14 @@ namespace BovineLabs.Core.ObjectManagement
             }
 #endif
 
-            this.rawValue = mod << ModShift | id;
+            this.RawValue = mod << ModShift | id;
         }
 
-        public int RawValue => this.rawValue;
+        [CreateProperty]
+        public ushort Mod => (ushort)(this.RawValue >> ModShift);
 
         [CreateProperty]
-        public ushort Mod => (ushort)(this.rawValue >> ModShift);
-
-        [CreateProperty]
-        public int ID => this.rawValue & IDMask;
+        public int ID => this.RawValue & IDMask;
 
         public static bool operator ==(ObjectId left, ObjectId right)
         {
@@ -66,7 +63,7 @@ namespace BovineLabs.Core.ObjectManagement
         /// <inheritdoc/>
         public int CompareTo(ObjectId other)
         {
-            return this.rawValue.CompareTo(other.rawValue);
+            return this.RawValue.CompareTo(other.RawValue);
         }
 
         /// <inheritdoc/>
@@ -89,13 +86,13 @@ namespace BovineLabs.Core.ObjectManagement
         /// <inheritdoc />
         public bool Equals(ObjectId other)
         {
-            return this.rawValue == other.rawValue;
+            return this.RawValue == other.RawValue;
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return this.rawValue;
+            return this.RawValue;
         }
     }
 }
