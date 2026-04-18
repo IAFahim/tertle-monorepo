@@ -20,7 +20,7 @@ jobs:
         run: |
           rm -rf .gitmodules
           git rm --cached -r . 2>/dev/null || true
-          for repo in com.unity.netcode com.unity.entities com.bovinelabs.core com.bovinelabs.recast com.bovinelabs.anchor com.bovinelabs.bridge com.bovinelabs.timeline com.bovinelabs.essence com.bovinelabs.nerve com.bovinelabs.reaction; do
+          for repo in com.unity.netcode com.unity.entities com.bovinelabs.core com.bovinelabs.recast com.bovinelabs.anchor com.bovinelabs.bridge com.bovinelabs.timeline com.bovinelabs.reaction; do
             rm -rf "$repo"
           done
 
