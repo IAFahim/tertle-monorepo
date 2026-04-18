@@ -357,4 +357,47 @@ public class ForEachErrorTests
         var expected = VerifyCS.CompilerError(nameof(IfeCompilerMessages.SGFE013)).WithLocation(0);
         await VerifyCS.VerifySourceGeneratorAsync(source, expected);
     }
+
+    [TestMethod]
+    public async Task SGFE014_WrongTupleOrdering_ForEachVariableStatementSyntax_WithEntityAccess()
+    {
+        const string source = @"
+            using Unity.Entities;
+            using Unity.Entities.Tests;
+            partial struct TestSystem : ISystem
+            {
+                public void OnCreate(ref SystemState state) { }
+                public void OnUpdate(ref SystemState state)
+                {
+                    foreach ((Entity e, EcsTestData c) in {|#0:SystemAPI.Query<RefRO<EcsTestData>>()
+                    .WithEntityAccess()|}) {}
+                }
+                public void OnDestroy(ref SystemState state) { }
+            }";
+        var expectedA = VerifyCS.CompilerError("CS0029").WithSpan(9, 31, 9, 39);
+        var expectedB = VerifyCS.CompilerError("CS0029").WithSpan(9, 41, 9, 54);
+        var expectedC = VerifyCS.CompilerError(nameof(IfeCompilerMessages.SGFE014)).WithLocation(0);
+        await VerifyCS.VerifySourceGeneratorAsync(source, expectedA, expectedB, expectedC);
+    }
+
+    [TestMethod]
+    public async Task SGFE014_WrongTupleOrdering_ForEachStatementSyntax_WithEntityAccess()
+    {
+        const string source = @"
+            using Unity.Entities;
+            using Unity.Entities.Tests;
+            partial struct TestSystem : ISystem
+            {
+                public void OnCreate(ref SystemState state) { }
+                public void OnUpdate(ref SystemState state)
+                {
+                    foreach ((Entity, EcsTestData) result in {|#0:SystemAPI.Query<RefRO<EcsTestData>>()
+                    .WithEntityAccess()|}) {}
+                }
+                public void OnDestroy(ref SystemState state) { }
+            }";
+        var expectedA = VerifyCS.CompilerError("CS0030").WithSpan(9, 21, 9, 28);
+        var expectedB = VerifyCS.CompilerError(nameof(IfeCompilerMessages.SGFE014)).WithLocation(0);
+        await VerifyCS.VerifySourceGeneratorAsync(source, expectedA, expectedB);
+    }
 }

@@ -245,24 +245,27 @@ namespace Unity.NetCode
         }
 
         /// <inheritdoc cref="ReleasePrefabReference"/>
-        public static void ReleaseGameObjectEntityReference(GameObject gameObject, bool worldIsCreated)
+        public static void ReleaseGameObjectEntityReference(GameObject gameObject, bool worldIsCreated, bool forceRelease=false)
         {
-            ReleaseEntityReference(GameObjectKey.GetForGameObject(gameObject.GetEntityId()), worldIsCreated);
+            ReleaseEntityReference(GameObjectKey.GetForGameObject(gameObject.GetEntityId()), worldIsCreated, forceRelease);
         }
 
         /// <inheritdoc cref="ReleasePrefabReference"/>
-        public static void ReleaseGameObjectEntityReference(EntityId gameObjectId, bool worldIsCreated)
+        public static void ReleaseGameObjectEntityReference(EntityId gameObjectId, bool worldIsCreated, bool forceRelease=false)
         {
-            ReleaseEntityReference(GameObjectKey.GetForGameObject(gameObjectId), worldIsCreated);
+            ReleaseEntityReference(GameObjectKey.GetForGameObject(gameObjectId), worldIsCreated, forceRelease);
         }
 
         /// <inheritdoc cref="ReleasePrefabReference"/>
-        private static EntityLink ReleaseEntityReference(GameObjectKey gameObjectKey, bool worldIsCreated)
+        /// <param name="worldIsCreated">Whether to assume the world is created or not</param>
+        /// <param name="gameObjectKey">The GameObject whose entity we're releasing</param>
+        /// <param name="forceRelease">Forces the destruction of the associated entity, even if the ref count is > 0</param>
+        private static EntityLink ReleaseEntityReference(GameObjectKey gameObjectKey, bool worldIsCreated, bool forceRelease=false)
         {
             ref var self = ref Netcode.Unmanaged.m_EntityMapping;
             if (self.m_MappedEntities.TryGetValue(gameObjectKey, out var mappedEntity))
             {
-                if (--mappedEntity.RefCount > 0)
+                if (!forceRelease && --mappedEntity.RefCount > 0)
                     self.m_MappedEntities[gameObjectKey] = mappedEntity;
                 else
                 {

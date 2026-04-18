@@ -6,6 +6,8 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Assertions;
+using Unity.Scripting.LifecycleManagement;
+using UnityEngine;
 
 namespace Unity.Entities
 {
@@ -113,13 +115,12 @@ namespace Unity.Entities
     /// prefer <seealso cref="World.AddSystem"/>
     /// </summary>
     [GenerateTestsForBurstCompatibility]
-    public static class SystemBaseRegistry
+    public static partial class SystemBaseRegistry
     {
         class Managed
         {
             public static List<Type> s_StructTypes = null;
             public static List<RegistrationEntry> s_PendingRegistrations;
-            public static bool s_DisposeRegistered = false;
         }
 
         struct Dummy
@@ -174,22 +175,6 @@ namespace Unity.Entities
                 ref var data = ref s_Data.Data;
                 data.Construct();
 
-                // Arrange for domain unloads to wipe the pending registration list, which works around multiple domain reloads in sequence
-                if (!Managed.s_DisposeRegistered)
-                {
-                    Managed.s_DisposeRegistered = true;
-#pragma warning disable UAC0006
-#if UNITY_EDITOR
-                    AppDomain.CurrentDomain.DomainUnload += (_, __) =>
-#else
-                    AppDomain.CurrentDomain.ProcessExit += (_, __) =>
-#endif
-                    {
-                        s_Data.Data.Dispose();
-                        Managed.s_PendingRegistrations = null;
-                    };
-#pragma warning restore UAC0006
-                }
             }
 
             // The order/number here must match UnmanagedSystemFunctionType
@@ -205,6 +190,17 @@ namespace Unity.Entities
                 m_DebugName = debugName,
                 m_BurstCompileBits = burstCompileBits
             });
+        }
+
+#if UNITY_EDITOR
+        [OnCodeUnloading]
+#else
+        [OnExitingPlayMode]
+#endif
+        static void Shutdown()
+        {
+            s_Data.Data.Dispose();
+            Managed.s_PendingRegistrations = null;
         }
 
         [ExcludeFromBurstCompatTesting("Uses managed delegate")]

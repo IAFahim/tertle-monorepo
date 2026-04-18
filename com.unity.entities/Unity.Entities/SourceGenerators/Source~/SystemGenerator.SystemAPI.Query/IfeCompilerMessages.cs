@@ -103,4 +103,13 @@ public static class IfeCompilerMessages
             "Invoking `SystemAPI.Query<T>(), where `T` is generic, is not allowed.",
             errorLocation);
     }
+
+    public static void SGFE014(SystemDescription systemDescription, Location errorLocation)
+    {
+        systemDescription.LogError(
+            nameof(SGFE014),
+            ErrorTitle,
+            "When using `.WithEntityAccess()`, the `Entity` must be the last element in the `foreach` iteration tuple.",
+            errorLocation);
+    }
 }

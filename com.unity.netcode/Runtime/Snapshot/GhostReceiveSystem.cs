@@ -145,7 +145,7 @@ namespace Unity.NetCode
 
         NativeArray<int> m_GhostCompletionCount;
         StreamCompressionModel m_CompressionModel;
-        static readonly Unity.Profiling.ProfilerMarker k_Scheduling = new Unity.Profiling.ProfilerMarker("GhostUpdateSystem_Scheduling");
+        static readonly Unity.Profiling.ProfilerMarker k_Scheduling = new Unity.Profiling.ProfilerMarker("GhostReceiveSystem_Scheduling");
 
         EntityTypeHandle m_EntityTypeHandle;
         ComponentLookup<SnapshotData> m_SnapshotDataFromEntity;
@@ -159,6 +159,7 @@ namespace Unity.NetCode
         FixedString512Bytes m_LogFolder;
 #endif
         ComponentLookup<EnablePacketLogging> m_EnableLoggingFromEntity;
+        ComponentLookup<GhostGameObjectLink> m_GameObjectLookup;
         BufferLookup<GhostComponentSerializer.State> m_GhostComponentCollectionFromEntity;
         BufferLookup<GhostCollectionPrefabSerializer> m_GhostTypeCollectionFromEntity;
         BufferLookup<GhostCollectionComponentIndex> m_GhostComponentIndexFromEntity;
@@ -234,6 +235,7 @@ namespace Unity.NetCode
             m_PrefabNamesFromEntity = state.GetComponentLookup<PrefabDebugName>(true);
 #endif
             m_EnableLoggingFromEntity = state.GetComponentLookup<EnablePacketLogging>(false);
+            m_GameObjectLookup = state.GetComponentLookup<GhostGameObjectLink>(true);
             m_GhostComponentCollectionFromEntity = state.GetBufferLookup<GhostComponentSerializer.State>(true);
             m_GhostTypeCollectionFromEntity = state.GetBufferLookup<GhostCollectionPrefabSerializer>(true);
             m_GhostComponentIndexFromEntity = state.GetBufferLookup<GhostCollectionComponentIndex>(true);
@@ -268,9 +270,19 @@ namespace Unity.NetCode
         {
             public EntityCommandBuffer.ParallelWriter CommandBuffer;
             [ReadOnly] public EntityTypeHandle EntitiesType;
+            public Entity DelayedDespawnSingletonEntity;
+
+            [ReadOnly] public ComponentLookup<GhostGameObjectLink> isGOLookup;
 
             public void LambdaMethod(Entity entity, int index)
             {
+                if (isGOLookup.HasComponent(entity))
+                {
+                    CommandBuffer.AppendToBuffer(index, DelayedDespawnSingletonEntity, new GameObjectDespawnTracking()
+                    {
+                        oneDespawn = new GhostDespawnSystem.DelayedDespawnGhost() { entity = entity, }
+                    });
+                }
                 CommandBuffer.DestroyEntity(index, entity);
             }
 
@@ -1422,10 +1434,14 @@ namespace Unity.NetCode
                 if (!m_GhostCleanupQuery.IsEmptyIgnoreFilter)
                 {
                     m_EntityTypeHandle.Update(ref state);
+                    var despawnTrackingEntity = SystemAPI.GetSingletonEntity<GameObjectDespawnTracking>();
+                    m_GameObjectLookup.Update(ref state);
                     var clearJob = new ClearGhostsJob
                     {
                         EntitiesType = m_EntityTypeHandle,
-                        CommandBuffer = commandBuffer.AsParallelWriter()
+                        CommandBuffer = commandBuffer.AsParallelWriter(),
+                        DelayedDespawnSingletonEntity = despawnTrackingEntity,
+                        isGOLookup = m_GameObjectLookup,
                     };
                     k_Scheduling.Begin();
                     state.Dependency = clearJob.ScheduleParallel(m_GhostCleanupQuery, state.Dependency);

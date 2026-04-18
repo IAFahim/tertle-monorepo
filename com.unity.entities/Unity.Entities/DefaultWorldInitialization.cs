@@ -11,13 +11,14 @@ using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine.LowLevel;
 using UnityEngine.PlayerLoop;
+using Unity.Scripting.LifecycleManagement;
 
 namespace Unity.Entities
 {
     /// <summary>
     /// Utilities to help initialize the default ECS <see cref="World"/>.
     /// </summary>
-    public static class DefaultWorldInitialization
+    public static partial class DefaultWorldInitialization
     {
 #pragma warning disable 0067 // unused variable
         /// <summary>
@@ -43,7 +44,11 @@ namespace Unity.Entities
             DomainUnloadOrPlayModeChangeShutdown();
         }
 
-        internal static void CleanupEntityComponentStore(object _, EventArgs __) => CleanupEntityComponentStore();
+#if UNITY_EDITOR
+        [OnCodeUnloading]
+#else
+        [OnExitingPlayMode]
+#endif
         internal static void CleanupEntityComponentStore()
         {
 #if!ENTITY_STORE_V1

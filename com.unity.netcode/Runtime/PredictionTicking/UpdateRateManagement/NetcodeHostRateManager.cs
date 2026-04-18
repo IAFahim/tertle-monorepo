@@ -35,7 +35,7 @@ namespace Unity.NetCode
 
         void OnEnterSimulationGroup(ComponentSystemGroup group)
         {
-            Netcode.Instance.m_ActiveWorld = group.World;
+            Netcode.Instance.m_ActiveWorld = (NetcodeWorld)group.World;
             m_ClientSeverTickRateQuery.TryGetSingleton<ClientServerTickRate>(out var tickRate);
             tickRate.ResolveDefaults();
             ref var networkTime = ref m_NetworkTimeQuery.GetSingletonRW<NetworkTime>().ValueRW;

@@ -11,7 +11,7 @@ However, Unity's entity component system (ECS) is designed so that it represents
 * **Authoring data** is any data that you create during the editing of your application, such a scripts, assets, or any other game-related data. This data type is flexible and readable: designed for humans to interact with.
 * **Runtime data** is the data that ECS processes at runtime, such as the data it processes when you enter Play mode. This data type is optimized for performance and storage efficiency: designed for computers to process.
 
-In the Editor, you can always check what kind of data type Unity is processing, through the data mode circles at the top of the Inspector and Hierarchy. For more information, refer to the documentation on [Working with authoring and runtime data](editor-authoring-runtime.md).
+The [Inspector](editor-entity-inspector.md) automatically shows the appropriate data based on your selection: selecting an entity displays runtime data, and selecting a GameObject displays authoring data.
 
 ## Baking process
 

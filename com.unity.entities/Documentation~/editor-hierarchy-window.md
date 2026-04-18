@@ -1,21 +1,25 @@
 # Entities Hierarchy window reference
 
-The Entities Hierarchy window is an Editor window that you can use to see the entity hierarchy of each [world](concepts-worlds.md) in your project. This window is useful if your project has a lot of entities that you want to search for and visualize in their hierarchy. 
+The Entities Hierarchy window is an Editor window that you can use to see the entity hierarchy of each [world](concepts-worlds.md) in your project. This window is useful if your project has a lot of entities that you want to search for and visualize in their hierarchy.
 
-It contains the same operations that you can perform in the [Hierarchy window](https://docs.unity3d.com/Manual/Hierarchy.html) for GameObjects, but you can't select multiple items at once. 
+It contains the same operations that you can perform in the [Hierarchy window](https://docs.unity3d.com/Manual/Hierarchy.html) for GameObjects, but you can't select multiple items at once.
 
 To open the Entities Hierarchy window, go to **Window &gt; Entities &gt; Hierarchy**.
 
-To select the Worlds in your project, use the drop-down in the top left of the window. You can also search for specific entities by their name, ID, or component. 
+To select the Worlds in your project, use the drop-down in the top left of the window. You can also search for specific entities by their name, ID, or component.
 
 >[!TIP]
->To view more information about an entity, select it in the list. Unity then displays it in the [Inspector](editor-inspectors.md) window. 
+>To view more information about an entity, select it in the list. Unity then displays it in the [Inspector](editor-inspectors.md) window.
 
 ## Data modes
 
-To manually switch between [data modes](editor-authoring-runtime.md), select the circle in the right hand corner to switch between Authoring and Runtime data modes. Unity automatically switches between modes when you enter or exit Play mode.
+The Entities Hierarchy window supports data modes that control the kind of data displayed:
 
-To see the full entities hierarchy in both Edit mode and Play mode, enable real-time conversion of GameObject data into Entities data. To do this, open the **Preferences** window and go to  **Entities &gt; Baking &gt; Live Baking**. For more information, see [Entities Preferences reference](editor-preferences.md)
+* **Authoring mode**: Displays the authoring (GameObject) representation of data, such as GameObjects and their MonoBehaviour components inside subscenes.
+* **Runtime mode**: Displays the runtime (entity) representation of data, such as entities with their ECS components. Runtime data is highlighted with orange or red vertical bars to indicate that it doesn't persist when you exit Play mode.
+* **Mixed mode**: Displays authoring data inside open subscenes and runtime data outside of them.
+
+To switch between data modes, select the data mode circle in the top right corner of the window. You can choose from Automatic, Authoring, Mixed, or Runtime. In Automatic mode, Unity uses the Authoring data mode in Edit mode and the Mixed data mode in Play mode.
 
 ### Authoring data mode
 
@@ -41,7 +45,7 @@ In Runtime data mode, the Entities Hierarchy window displays an orange ![Runtime
 |**Outside a Sub Scene**| <ul><li>GameObjects as their runtime state.</li><li>Entities created outside the Baking process, and outside Sub Scenes, like WorldTime.</li></ul>|
 |**Inside Sub Scenes**| Only entities.|
 
-Everything marked with an orange or red vertical bar relates to runtime data. Furthermore, a <img src="images/entity-prefab-icon.png" width="15"/> indicates that it is an entity prefab, and a ![](images/editor-entity-icon.png) with blue text, indicates that this is an instance of an entity prefab. 
+Everything marked with an orange or red vertical bar relates to runtime data. Furthermore, a ![](images/entity-prefab-icon.png) indicates that it is an entity prefab, and a ![](images/editor-entity-icon.png) with blue text, indicates that this is an instance of an entity prefab.
 
 ![Entities Hierarchy window in Runtime data mode](images/editor-hierarchy-runtime-mode.png)<br/>_Entities Hierarchy window in Runtime data mode_
 

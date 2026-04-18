@@ -11,6 +11,7 @@ using UnityEngine.SceneManagement;
 using Unity.Content;
 using Unity.Burst;
 using System.Threading;
+using Unity.Scripting.LifecycleManagement;
 #if ENABLE_PROFILER
 using Unity.Profiling;
 using System.Runtime.CompilerServices;
@@ -24,7 +25,7 @@ namespace Unity.Entities.Content
     /// </summary>
     [GenerateTestsForBurstCompatibility]
     [BurstCompile]
-    public static class RuntimeContentManager
+    public static partial class RuntimeContentManager
     {
         internal const string k_NameSpaceString = "RTC";
         internal const string k_ContentArchiveDirectory = "ContentArchives";
@@ -214,9 +215,6 @@ namespace Unity.Entities.Content
              * Monobehaviours (due to its script execution order being set to maximum) because this doesn't happen in the editor.
              */
 #if UNITY_EDITOR
-#pragma warning disable UAC0006
-            AppDomain.CurrentDomain.DomainUnload += OnShutdown;
-#pragma warning restore UAC0006
             UnityEditor.EditorApplication.quitting += () => { Cleanup(out _); };
 #else
             DefaultWorldInitialization.DefaultWorldDestroyed += () => { RuntimeContentManager.Cleanup(out _); };
@@ -240,7 +238,12 @@ namespace Unity.Entities.Content
             }
         }
 
-        private static void OnShutdown(object _, EventArgs __)
+#if UNITY_EDITOR
+        [OnCodeUnloading]
+#else
+        [OnExitingPlayMode]
+#endif
+        private static void OnShutdown()
         {
             Cleanup(out var unreleasedObjectCount);
         }
@@ -382,10 +385,6 @@ namespace Unity.Entities.Content
             }
 
             SceneManager.sceneUnloaded -= ReleaseSceneResources;
-#pragma warning disable UAC0006
-            AppDomain.CurrentDomain.DomainUnload -= OnShutdown;
-            AppDomain.CurrentDomain.ProcessExit -= OnShutdown;
-#pragma warning restore UAC0006
             return unreleasedObjectCount == 0;
         }
 

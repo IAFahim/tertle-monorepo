@@ -110,7 +110,7 @@ namespace Unity.NetCode
             entityManager.AddComponentData(prefabEntity, new LocalToWorld());
             entityManager.AddComponentData(prefabEntity, new PostTransformMatrix{Value = float4x4.Scale(prefab.transform.localScale)});
             entityManager.AddComponentData(prefabEntity, new LocalTransform() { Position = prefab.transform.localPosition, Rotation = prefab.transform.localRotation});
-            entityManager.AddComponentData(prefabEntity, new PendingGameObjectSpawn() { ShouldBeActive = prefab.activeSelf });
+            entityManager.AddComponentData(prefabEntity, new PendingClientGameObjectSpawn() { ShouldBeActive = prefab.activeSelf });
             // entityManager.SetEnabled(prefabEntity, prefab.activeSelf); // TODO-release this should be handled by entities engine side.
 
 #if UNITY_EDITOR

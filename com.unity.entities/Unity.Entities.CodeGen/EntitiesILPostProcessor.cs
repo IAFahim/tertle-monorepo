@@ -16,9 +16,7 @@ using Unity.Burst;
 using System.Reflection;
 using System.Threading;
 using UnityEngine;
-#if UNITY_6000_5_OR_NEWER
 using UnityEngine.Assemblies;
-#endif
 
 [assembly: InternalsVisibleTo("Unity.Entities.Hybrid.CodeGen")]
 namespace Unity.Entities.CodeGen
@@ -30,11 +28,7 @@ namespace Unity.Entities.CodeGen
         static EntitiesILPostProcessor[] FindAllEntitiesILPostProcessors()
         {
             var processorTypes = new List<Type>();
-#if UNITY_6000_5_OR_NEWER
             foreach (var assembly in CurrentAssemblies.GetLoadedAssemblies())
-#else
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-#endif
             {
                 if (assembly.FullName.Contains(".CodeGen"))
                     processorTypes.AddRange(assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(EntitiesILPostProcessor)) && !t.IsAbstract));

@@ -10,6 +10,9 @@ You can use an entity prefabs in a similar way to GameObject prefabs, because th
 > [!NOTE]
 > When prefab instances are present in the subscene hierarchy, baking treats them as normal GameObjects because they don't have the `Prefab` or `LinkedEntityGroup` components.
 
+> [!NOTE]
+> When a Prefab is baked, the `Dynamic` [transform usage flag](transforms-usage-flags.md) is always added to the prefab root. This ensures that the prefab entity has the required transform components for moving at runtime, for example for changing its position after instantiation.
+
 ## Create and register an Entity prefab
 
 To ensure that prefabs are baked and available in the entity scene, you must register them to a [baker](baking-baker-overview.md). This makes sure that there is a dependency on the prefab object, and that the prefab is baked and receives the proper components. When you reference the entity prefab in a component, Unity serializes the content into the subscene that uses it.

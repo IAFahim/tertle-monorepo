@@ -8,6 +8,8 @@ A **world** is a collection of [entities](concepts-entities.md). An entity's ID 
 
 A world owns a set of [systems](concepts-systems.md), which usually only accesses the entities within that same world. Additionally, a set of entities within a world which have the same set of component types are stored together in an [archetype](concepts-archetypes.md), which determines how the components in your program are organized in memory.
 
+Enable the [**Use new Hierarchy window**](https://docs.unity3d.com/6000.5/Documentation/Manual/preferences-general.html#hierarchy-window) option in the Preferences window to display entity worlds as nodes in the [Hierarchy window](editor-hierarchy-world-node.md).
+
 ## Initialization
 
 By default, when you enter Play mode, Unity creates a `World` instance and adds every system to this default world.
@@ -29,3 +31,4 @@ Unity uses [`WorldFlags`](xref:Unity.Entities.WorldFlags) to create specialized 
 
 * [Entities concepts](concepts-entities.md)
 * [Systems concepts](concepts-systems.md)
+* [Entity world in Hierarchy window](editor-hierarchy-world-node.md)

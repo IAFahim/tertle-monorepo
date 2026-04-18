@@ -6,11 +6,12 @@ using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Analytics;
+using Unity.Scripting.LifecycleManagement;
 
 namespace Unity.Entities
 {
     [InitializeOnLoad]
-    static class BakingAnalytics
+    static partial class BakingAnalytics
     {
         static bool s_EventsRegistered = false;
         const int k_MaxEventsPerHour = 1000;
@@ -60,10 +61,12 @@ namespace Unity.Entities
                 prefabs_count = 0,
                 skinned_mesh_renderer_component_count = 0,
             };
+        }
 
-#pragma warning disable UAC0006
-            AppDomain.CurrentDomain.DomainUnload += (_, __) => { s_BakeTypeIndices.Dispose(); };
-#pragma warning restore UAC0006
+        [OnCodeUnloading]
+        private static void Shutdown()
+        {
+            s_BakeTypeIndices.Dispose();
         }
 
         static bool EnableAnalytics()

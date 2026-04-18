@@ -6,12 +6,13 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using UnityEngine.Profiling;
+using Unity.Scripting.LifecycleManagement;
 
 namespace Unity.Entities
 {
     [GenerateTestsForBurstCompatibility(RequiredUnityDefine = "ENABLE_UNITY_COLLECTIONS_CHECKS", CompileTarget = GenerateTestsForBurstCompatibilityAttribute.BurstCompatibleCompileTarget.Editor)]
     // internal for BurstCompatible test support
-    unsafe internal struct ComponentSafetyHandles
+    unsafe internal partial struct ComponentSafetyHandles
     {
         const int                   kMaxTypes = TypeManager.MaximumTypesCount;
 
@@ -177,7 +178,6 @@ namespace Unity.Entities
         }
 
         static bool s_Initialized;
-        private static bool s_AppDomainUnloadRegistered;
         [ExcludeFromBurstCompatTesting("Uses managed delegates")]
         public static void Initialize()
         {
@@ -191,19 +191,13 @@ namespace Unity.Entities
                 (int*)Memory.Unmanaged.Allocate(sizeof(int) * kMaxTypes, 16, Allocator.Persistent);
             UnsafeUtility.MemClear(m_StaticSafetyIdData.Data.m_StaticSafetyIdsForArchetypeChunkArrays, sizeof(int) * kMaxTypes);
 
-            if (!s_AppDomainUnloadRegistered)
-            {
-                // important: this will always be called from a special unload thread (main thread will be blocking on this)
-#pragma warning disable UAC0006
-                System.AppDomain.CurrentDomain.DomainUnload += (_, __) => { Shutdown(); };
-
-                // There is no domain unload in player builds, so we must be sure to shutdown when the process exits.
-                System.AppDomain.CurrentDomain.ProcessExit += (_, __) => { Shutdown(); };
-#pragma warning restore UAC0006
-                s_AppDomainUnloadRegistered = true;
-            }
         }
 
+#if UNITY_EDITOR
+        [OnCodeUnloading]
+#else
+        [OnExitingPlayMode]
+#endif
         static void Shutdown()
         {
             if (s_Initialized)

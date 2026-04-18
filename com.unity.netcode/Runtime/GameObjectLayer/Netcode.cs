@@ -91,9 +91,7 @@ namespace Unity.NetCode
             }
         }
 
-        internal World m_ActiveWorld;
-        internal static World ActiveWorld => Instance.m_ActiveWorld;
-
+        internal NetcodeWorld m_ActiveWorld;
 
         #region singleton
 
@@ -230,7 +228,52 @@ namespace Unity.NetCode
             s_UnmanagedInstance.Data.Dispose();
         }
 
+
+        /// <summary>
+        /// Updates the Netcode.m_ActiveWorld to the next potential world that's not the currently provided system. Useful for when
+        /// a world gets destroyed and we want to set the m_ActiveWorld to the next most likely successor.
+        /// </summary>
+        /// <param name="currentWorld"></param>
+        internal static void SetSuccessorActiveWorld(NetcodeWorld currentWorld)
+        {
+            foreach (var potentialActiveWorld in Netcode.GetNetcodeWorlds())
+            {
+                if (potentialActiveWorld != currentWorld)
+                {
+                    Instance.m_ActiveWorld = potentialActiveWorld;
+                    return;
+                }
+            }
+
+            Instance.m_ActiveWorld = null;
+        }
+
         #endregion // singleton
+
+        #region world management
+
+
+        private static IEnumerable<NetcodeWorld> GetNetcodeWorlds()
+        {
+            // in order priority get a series of potential worlds to be the default "active world"
+            foreach (var serverWorld in ClientServerBootstrap.ServerWorlds)
+            {
+                yield return (NetcodeWorld)serverWorld;
+            }
+
+            foreach (var clientWorld in ClientServerBootstrap.ClientWorlds)
+            {
+                if (clientWorld.IsHost()) continue; // we've already covered this world in the first loop
+                yield return (NetcodeWorld)clientWorld;
+            }
+
+            foreach (var thinClientWorld in ClientServerBootstrap.ThinClientWorlds)
+            {
+                yield return (NetcodeWorld)thinClientWorld;
+            }
+        }
+
+        #endregion
 
         /// <inheritdoc cref="PrefabsRegistry.RegisterPrefab" />
         public static void RegisterPrefab(GameObject prefab, World forWorld)

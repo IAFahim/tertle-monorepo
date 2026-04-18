@@ -229,15 +229,6 @@ namespace Unity.Entities
 
         void Init(WorldFlags flags, AllocatorManager.AllocatorHandle backingAllocatorHandle)
         {
-#if UNITY_EDITOR
-            // Multiple worlds can be created, but we only want the cleanup callback registered once.
-            // Removing the callback if it is missing is silently ignored.
-#pragma warning disable UAC0006
-            AppDomain.CurrentDomain.DomainUnload -= DefaultWorldInitialization.CleanupEntityComponentStore;
-            AppDomain.CurrentDomain.DomainUnload += DefaultWorldInitialization.CleanupEntityComponentStore;
-#pragma warning restore UAC0006
-#endif
-
             s_NewWorldMarker.Begin();
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS

@@ -456,7 +456,8 @@ namespace Unity.NetCode.GeneratorTests
                 [GhostField(Composite=false)] public TwoFieldStruct b; //2bit
             }";
 
-            this.ErrorLogExclusion = new Regex(".*ComponentB\\.e.*Types must have either valid \\[GhostField\\] attributes, or a \\[GhostEnabledBit\\].*");
+            LogAssert.Expect(LogType.Error, new Regex(".*ComponentA\\.e.*Types must have either valid \\[GhostField\\] attributes, or a \\[GhostEnabledBit\\].*"));
+            LogAssert.Expect(LogType.Error, new Regex(".*ComponentB\\.e.*Types must have either valid \\[GhostField\\] attributes, or a \\[GhostEnabledBit\\].*"));
 
             var tree = CSharpSyntaxTree.ParseText(testData);
             var results = GeneratorTestHelpers.RunGenerators(tree);
@@ -588,7 +589,6 @@ namespace Unity.NetCode.GeneratorTests
             Assert.AreEqual(1, walker.Receiver.Variants.Count);
 
             var resuls = GeneratorTestHelpers.RunGenerators(tree);
-            var diagnostics = resuls.Diagnostics;
             Assert.AreEqual(2, resuls.GeneratedSources.Length, "Num generated files does not match");
 
             var outputTree = resuls.GeneratedSources[0].SyntaxTree;
@@ -760,7 +760,7 @@ namespace Unity.NetCode.GeneratorTests
             }
             ";
 
-            this.ErrorLogExclusion = new Regex("It is not possible to serialize property CommandData\\.CValue4 because does not have setter. Both setter and getters are required.");
+            LogAssert.IgnoreFailingLogs = true;
 
             var receiver = GeneratorTestHelpers.CreateSyntaxReceiver();
             var walker = new TestSyntaxWalker { Receiver = receiver };
@@ -832,7 +832,11 @@ namespace Unity.NetCode.GeneratorTests
             }
             ";
 
-            this.ErrorLogExclusion = new Regex("struct Test\\.Invalid5 cannot implement Buffer\\,Rpc interfaces at the same time");
+            LogAssert.Expect(LogType.Error, new Regex(@"struct Test\.Invalid1 cannot implement Component\,Rpc interfaces at the same time"));
+            LogAssert.Expect(LogType.Error, new Regex(@"struct Test\.Invalid2 cannot implement Component\,CommandData interfaces at the same time"));
+            LogAssert.Expect(LogType.Error, new Regex(@"struct Test\.Invalid3 cannot implement Component\,Buffer interfaces at the same time"));
+            LogAssert.Expect(LogType.Error, new Regex(@"struct Test\.Invalid4 cannot implement Buffer\,CommandData interfaces at the same time"));
+            LogAssert.Expect(LogType.Error, new Regex(@"struct Test\.Invalid5 cannot implement Buffer\,Rpc interfaces at the same time"));
 
             var receiver = GeneratorTestHelpers.CreateSyntaxReceiver();
             var walker = new TestSyntaxWalker { Receiver = receiver };
@@ -990,7 +994,7 @@ namespace Unity.NetCode.GeneratorTests
                 [GhostField] public char MyField;
             }
             ";
-            ErrorLogExclusion = new Regex("Inside type 'Unity_NetCode_Test_Generated_MyType', we could not find the exact template for field 'MyField' with");
+            LogAssert.Expect(LogType.Error, new Regex("Inside type 'Unity_NetCode_Test_Generated_MyType', we could not find the exact template for field 'MyField' with"));
 
             var tree = CSharpSyntaxTree.ParseText(testData);
             var results = GeneratorTestHelpers.RunGenerators(tree);
@@ -1050,14 +1054,15 @@ namespace Unity.NetCode.GeneratorTests
             }
             ";
 
+
+            var validErrorString = "we could not find the exact template for field 'AngleType' with configuration 'Type:System.Single Key:System.Single (quantized=-1 composite=False smoothing=0 subtype=1)'";
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(validErrorString)));
+
             var tree = CSharpSyntaxTree.ParseText(testDataWrong);
             var templateTree = CSharpSyntaxTree.ParseText(customTemplates);
             var results = GeneratorTestHelpers.RunGenerators(tree, templateTree);
             var diagnostics = results.Diagnostics.Where(m => m.Severity == DiagnosticSeverity.Error).ToArray();
             Assert.AreEqual(1, diagnostics.Length);
-
-            var validErrorString = "we could not find the exact template for field 'AngleType' with configuration 'Type:System.Single Key:System.Single (quantized=-1 composite=False smoothing=0 subtype=1)'";
-            this.ErrorLogExclusion = new Regex(Regex.Escape(validErrorString));
             Assert.IsTrue(diagnostics[0].GetMessage().Contains(validErrorString));
 
             tree = CSharpSyntaxTree.ParseText(testDataCorrect);
@@ -1130,6 +1135,8 @@ namespace Unity.NetCode.GeneratorTests
                     $"/Path/To/MyTemplate{NetCodeSourceGenerator.NETCODE_ADDITIONAL_FILE}",
                     $"#templateid:/Path/To/MyTemplate\n{TestDataSource.CustomTemplate}")
             });
+            LogAssert.Expect(LogType.Error, new Regex("'.*Translation2d' defines a field 'Position' with GhostField configuration 'Type\\:Unity\\.Mathematics\\.float3 Key:Unity\\.Mathematics\\.float3 \\(quantized=1000 composite=True smoothing=3 subtype=1\\)'\\ using an invalid configuration: Subtyped types cannot also be defined as composite"));
+            LogAssert.Expect(LogType.Error, new Regex("Inside type '.*Translation2d', we could not find the exact template for field 'Position' with configuration 'Type\\:Unity\\.Mathematics\\.float3 Key:Unity\\.Mathematics\\.float3 \\(quantized=1000 composite=True smoothing=3 subtype=1\\)'\\, which means that netcode cannot serialize this type"));
 
             var tree = CSharpSyntaxTree.ParseText(testData);
             {
@@ -1140,7 +1147,6 @@ namespace Unity.NetCode.GeneratorTests
                 var diagnostics = results.Diagnostics.Where(m => m.Severity == DiagnosticSeverity.Error).ToArray();
                 Assert.That(diagnostics[0].GetMessage().Contains("Subtyped types cannot also be defined as composite"));
             }
-            ErrorLogExclusion = new Regex("Inside type '.*Translation2d', we could not find the exact template for field 'Position' with configuration 'Type\\:Unity\\.Mathematics\\.float3 Key:Unity\\.Mathematics\\.float3 \\(quantized=1000 composite=True smoothing=3 subtype=1\\)'\\, which means that netcode cannot serialize this type");
 
             customTemplates =
                 customTemplates.Replace("Composite = true", "Composite = false", StringComparison.Ordinal);
@@ -1349,6 +1355,9 @@ namespace Unity.NetCode.GeneratorTests
                     public int __COMMAND_IS_RESERVED;
                 }
             }";
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape("Invalid namespace __GHOST_NAMESPACE__ for CantBeValid. __GHOST and __COMMAND are reserved prefixes and cannot be used in namspace, type and field names")));
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape("Invalid field name '__UNDERSCORE_IS_WELCOME__.__DUNNO_WHAT_BUT_IT_IS_VALID__.__GHOST_IS_RESERVED'. __GHOST and __COMMAND are reserved prefixes and cannot be used in namespace, type and field names!")));
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape("Invalid field name '__UNDERSCORE_IS_WELCOME__.__My_Command__.__COMMAND_IS_RESERVED'. __GHOST and __COMMAND are reserved prefixes and cannot be used in namespace, type and field names")));
 
             var tree = CSharpSyntaxTree.ParseText(testData);
             var results = GeneratorTestHelpers.RunGenerators(tree);
@@ -1362,7 +1371,6 @@ namespace Unity.NetCode.GeneratorTests
                 }
             }
 
-            ErrorLogExclusion = new Regex(Regex.Escape("Invalid field name '__UNDERSCORE_IS_WELCOME__.__My_Command__.__COMMAND_IS_RESERVED'. __GHOST and __COMMAND are reserved prefixes and cannot be used in namespace, type and field names"));
 
             Assert.AreEqual(3, errorCount, "errorCount");
         }
@@ -2258,6 +2266,7 @@ namespace Unity.NetCode.GeneratorTests
                 [GhostField]public FixedList512Bytes<float> Value;
             }
             ";
+            LogAssert.IgnoreFailingLogs = true;
             var tree = CSharpSyntaxTree.ParseText(testData);
             GeneratorRunResult results = default;
             Assert.DoesNotThrow(() =>
@@ -2268,7 +2277,6 @@ namespace Unity.NetCode.GeneratorTests
             Assert.AreEqual(2, warnings.Length);
             Assert.IsTrue(warnings[0].GetMessage().StartsWith("Invalid GhostFixedListCapacity attribute present on Invalid.Value of type Unity.Collections.FixedList512Bytes<float>. The maximum allowed capacity for a fixed list must bet less or equal than 64 elements."));
             Assert.IsTrue(warnings[1].GetMessage().StartsWith("Invalid.Value of type Unity.Collections.FixedList512Bytes<float> has a capacity greater than 64 elements. Replicated fixed lists can contain at most 64 elements. If the capacity exceed, please use the GhostFixedListCapacity attribute to constrain the maximum allowed length of the list."));
-            Generators.Debug.LastErrorLog = string.Empty;
         }
 
         //qpproximated test
@@ -2313,6 +2321,7 @@ namespace Unity.NetCode.GeneratorTests
                 [GhostField]public FixedList512Bytes<float> Value;
             }
             ";
+            LogAssert.IgnoreFailingLogs = true;
             var tree = CSharpSyntaxTree.ParseText(testData);
             GeneratorRunResult results = default;
             Assert.DoesNotThrow(() =>
@@ -2329,7 +2338,6 @@ namespace Unity.NetCode.GeneratorTests
             Assert.IsTrue(warnings[5].GetMessage().StartsWith("Buffer.Value of type Unity.Collections.FixedList512Bytes<float> has a capacity greater than 64 elements"));
             Assert.IsTrue(warnings[6].GetMessage().StartsWith("Command.Value of type Unity.Collections.FixedList512Bytes<float> has a capacity greater than 64 elements"));
             Assert.IsTrue(warnings[7].GetMessage().StartsWith("Rpc.Value of type Unity.Collections.FixedList4096Bytes<byte> has a capacity greater than 1024 elements"));
-            Generators.Debug.LastErrorLog = string.Empty;
         }
 
         [Test]
@@ -2605,7 +2613,7 @@ namespace Unity.NetCode.GeneratorTests
             }
             ";
 
-            ErrorLogExclusion = new Regex("");
+            LogAssert.IgnoreFailingLogs = true;
             var tree = CSharpSyntaxTree.ParseText(testData);
             GeneratorRunResult results = default;
             Assert.DoesNotThrow(() =>

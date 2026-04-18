@@ -279,7 +279,7 @@ namespace Unity.NetCode
             {
                 name = "ThinClientWorld" + s_NextThinClientId++;
             }
-            var world = new World(name, WorldFlags.GameThinClient);
+            var world = new NetcodeWorld(name, WorldFlags.GameThinClient);
 
             DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
 
@@ -316,7 +316,7 @@ namespace Unity.NetCode
 #if (UNITY_CLIENT || UNITY_SERVER) && !UNITY_EDITOR
                 throw new NotImplementedException();
 #endif
-            var world = new World(name, WorldFlags.GameServer | WorldFlags.GameClient);
+            var world = new NetcodeWorld(name, WorldFlags.GameServer | WorldFlags.GameClient);
 
             DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
             ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
@@ -351,7 +351,7 @@ namespace Unity.NetCode
 #if UNITY_SERVER && !UNITY_EDITOR
             throw new PlatformNotSupportedException("This executable was built using a 'server-only' build target (likely DGS). Thus, cannot create client worlds.");
 #else
-            var world = new World(name, WorldFlags.GameClient);
+            var world = new NetcodeWorld(name, WorldFlags.GameClient);
             ClientWorlds.Add(world); // Needs to happen before system creation, so ClientServerBootstrap.ClientWorld is initialized
 
             DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
@@ -456,7 +456,7 @@ namespace Unity.NetCode
             throw new PlatformNotSupportedException("This executable was built using a 'client-only' build target. Thus, cannot create a server world. In your ProjectSettings, change your 'Client Build Target' to `ClientAndServer` to support creating client-hosted servers.");
 #else
 
-            var world = new World(name, WorldFlags.GameServer);
+            var world = new NetcodeWorld(name, WorldFlags.GameServer);
             ServerWorlds.Add(world); // Needs to happen before system creation, so ClientServerBootstrap.ServerWorld is initialized
 
             DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);

@@ -38,9 +38,9 @@ namespace BovineLabs.Core.Tests.Iterators
             hashMap.AddOrSet(2, new float3(3, 2, 1));
             hashMap.AddOrSet(3, new Large());
 
-            Assert.AreEqual(1, hashMap.GetOrAddRef(0, 0));
-            Assert.AreEqual((short)2, hashMap.GetOrAddRef(1, (short)0));
-            Assert.AreEqual(new float3(3, 2, 1), hashMap.GetOrAddRef(2, float3.zero));
+            Assert.AreEqual(1, hashMap.GetOrAddRefUnsafe(0, 0));
+            Assert.AreEqual((short)2, hashMap.GetOrAddRefUnsafe(1, (short)0));
+            Assert.AreEqual(new float3(3, 2, 1), hashMap.GetOrAddRefUnsafe(2, float3.zero));
         }
 
         [Test]
@@ -86,26 +86,26 @@ namespace BovineLabs.Core.Tests.Iterators
 
             for (var i = 0; i < 50; i++)
             {
-                hashMap.GetOrAddRef((i * 8) + 0, 1);
-                hashMap.GetOrAddRef((i * 8) + 1, (short)2);
-                hashMap.GetOrAddRef((i * 8) + 2, new float3(1, 2, 3));
-                hashMap.GetOrAddRef((i * 8) + 3, new Large());
-                hashMap.GetOrAddRef((i * 8) + 4, new float3(3, 2, 1));
-                hashMap.GetOrAddRef((i * 8) + 5, new Large());
-                hashMap.GetOrAddRef((i * 8) + 6, 1);
-                hashMap.GetOrAddRef((i * 8) + 7, (short)2);
+                hashMap.GetOrAddRefUnsafe((i * 8) + 0, 1);
+                hashMap.GetOrAddRefUnsafe((i * 8) + 1, (short)2);
+                hashMap.GetOrAddRefUnsafe((i * 8) + 2, new float3(1, 2, 3));
+                hashMap.GetOrAddRefUnsafe((i * 8) + 3, new Large());
+                hashMap.GetOrAddRefUnsafe((i * 8) + 4, new float3(3, 2, 1));
+                hashMap.GetOrAddRefUnsafe((i * 8) + 5, new Large());
+                hashMap.GetOrAddRefUnsafe((i * 8) + 6, 1);
+                hashMap.GetOrAddRefUnsafe((i * 8) + 7, (short)2);
             }
 
             for (var i = 0; i < 50; i++)
             {
-                hashMap.GetOrAddRef((i * 8) + 0, 1);
-                hashMap.GetOrAddRef((i * 8) + 1, (short)2);
-                hashMap.GetOrAddRef((i * 8) + 2, new float3(1, 2, 3));
-                hashMap.GetOrAddRef((i * 8) + 3, new Large());
-                hashMap.GetOrAddRef((i * 8) + 4, new float3(3, 2, 1));
-                hashMap.GetOrAddRef((i * 8) + 5, new Large());
-                hashMap.GetOrAddRef((i * 8) + 6, 1);
-                hashMap.GetOrAddRef((i * 8) + 7, (short)2);
+                hashMap.GetOrAddRefUnsafe((i * 8) + 0, 1);
+                hashMap.GetOrAddRefUnsafe((i * 8) + 1, (short)2);
+                hashMap.GetOrAddRefUnsafe((i * 8) + 2, new float3(1, 2, 3));
+                hashMap.GetOrAddRefUnsafe((i * 8) + 3, new Large());
+                hashMap.GetOrAddRefUnsafe((i * 8) + 4, new float3(3, 2, 1));
+                hashMap.GetOrAddRefUnsafe((i * 8) + 5, new Large());
+                hashMap.GetOrAddRefUnsafe((i * 8) + 6, 1);
+                hashMap.GetOrAddRefUnsafe((i * 8) + 7, (short)2);
             }
         }
 
@@ -175,7 +175,7 @@ namespace BovineLabs.Core.Tests.Iterators
 
             const int key = 42;
 
-            ref var value = ref hashMap.GetOrAddRef(key, default(Large));
+            ref var value = ref hashMap.GetOrAddRefUnsafe(key, default(Large));
             value.TestValue0 = 123;
             value.TestValue1 = 456;
 
@@ -267,7 +267,7 @@ namespace BovineLabs.Core.Tests.Iterators
 
             Assert.Throws<InvalidOperationException>(() =>
             {
-                hashMap.GetOrAddRef(0, (short)0);
+                hashMap.GetOrAddRefUnsafe(0, (short)0);
             });
         }
 #endif

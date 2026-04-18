@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
 using Unity.Properties;
 using Unity.Entities.UI;
 using UnityEditor;
-using UnityEditor.Search;
+using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 using UnityEngine.Pool;
 
@@ -33,36 +32,6 @@ namespace Unity.Entities.Editor
         internal void ClearSearch() => m_Inspector?.ClearSearch();
         internal void ApplySearch(string searchText) => m_Inspector?.ApplySearch(searchText);
 
-        class ComponentsSearchView : SearchViewModel
-        {
-            readonly ComponentsTabInspector m_Inspector;
-
-            public ComponentsSearchView(ComponentsTabInspector inspector)
-                : base(new SearchViewState(SearchService.CreateContext(Array.Empty<SearchProvider>(), "")).LoadDefaults())
-            {
-                m_Inspector = inspector;
-                context.searchView = this;
-            }
-
-            public override void SetSearchText(string searchText, TextCursorPlacement moveCursor = TextCursorPlacement.Default)
-            {
-                SetSearchText(searchText, moveCursor, 0);
-            }
-
-            public override void SetSearchText(string searchText, TextCursorPlacement moveCursor, int cursorInsertPosition)
-            {
-                if (string.Equals(context.searchText.Trim(), searchText.Trim(), StringComparison.Ordinal))
-                    return;
-
-                context.searchText = searchText;
-
-                if (string.IsNullOrEmpty(searchText))
-                    m_Inspector.ClearSearch();
-                else
-                    m_Inspector.ApplySearch(searchText);
-            }
-        }
-
         [UsedImplicitly]
         internal class ComponentsTabInspector : PropertyInspector<ComponentsTab>
         {
@@ -72,8 +41,7 @@ namespace Unity.Entities.Editor
             VisualElement m_Root;
             TagComponentContainer m_TagsRoot;
             VisualElement m_ComponentsRoot;
-            ComponentsSearchView m_SearchView;
-            SearchFieldElement m_SearchField;
+            ToolbarSearchField m_SearchField;
 
             public override VisualElement Build()
             {
@@ -84,9 +52,10 @@ namespace Unity.Entities.Editor
                 Resources.AddCommonVariables(m_Root);
                 UnityEditor.Search.SearchElement.AppendStyleSheets(m_Root);
 
-                m_SearchView = new ComponentsSearchView(this);
-                m_SearchField = new SearchFieldElement("ComponentsSearch", m_SearchView, SearchQueryBuilderViewFlags.Default);
-                m_SearchField.AddToClassList(UssClasses.Inspector.ComponentsTab.SearchField);
+                m_SearchField = InspectorUtility.CreateSearchField(
+                    UssClasses.Inspector.ComponentsTab.SearchField,
+                    ApplySearch,
+                    ClearSearch);
 
                 var searchContainer = m_Root.Q(className: "search-field-container");
                 searchContainer.Add(m_SearchField);
@@ -110,13 +79,13 @@ namespace Unity.Entities.Editor
 
             public void ClearSearch()
             {
+                m_SearchField.SetValueWithoutNotify(string.Empty);
+
                 using var _ = ListPool<ComponentElementBase>.Get(out var list);
                 m_Root.Query<ComponentElementBase>().ToList(list);
 
-                for (var i = 0; i < list.Count; i++)
-                {
-                    list[i].Show();
-                }
+                foreach (var comp in list)
+                    comp.Show();
             }
 
             public void ApplySearch(string searchText)
@@ -124,9 +93,8 @@ namespace Unity.Entities.Editor
                 using var _ = ListPool<ComponentElementBase>.Get(out var list);
                 m_Root.Query<ComponentElementBase>().ToList(list);
 
-                for (var i = 0; i < list.Count; i++)
+                foreach (var element in list)
                 {
-                    var element = list[i];
                     var isMatch = element.DisplayName != null &&
                                   element.DisplayName.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0;
                     element.SetVisibility(isMatch);

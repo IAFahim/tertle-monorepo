@@ -228,5 +228,34 @@ namespace Unity.Entities.Editor
             runtimeBar.style.left = 2f - element.worldBound.x;
             element.UnregisterCallback<GeometryChangedEvent, VisualElement>(SetRuntimeBarPosition);
         }
+
+        public static ToolbarSearchField CreateSearchField(
+            string cssClass,
+            Action<string> onSearchChanged,
+            Action onSearchCleared)
+        {
+            var searchField = new ToolbarSearchField();
+            searchField.AddToClassList(cssClass);
+
+            searchField.RegisterValueChangedCallback(evt =>
+            {
+                var previousSearchText = evt.previousValue ?? string.Empty;
+                var newSearchText = evt.newValue ?? string.Empty;
+
+                // Fast path for identical values before calling Trim() to minimize allocations
+                if (previousSearchText == newSearchText)
+                    return;
+
+                if (string.Equals(previousSearchText.Trim(), newSearchText.Trim(), StringComparison.Ordinal))
+                    return;
+
+                if (newSearchText != string.Empty)
+                    onSearchChanged(newSearchText);
+                else
+                    onSearchCleared();
+            });
+
+            return searchField;
+        }
     }
 }

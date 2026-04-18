@@ -7,6 +7,7 @@ using Unity.Jobs;
 using Unity.Profiling;
 using Unity.Scenes;
 using Unity.Transforms;
+using UnityEditor;
 
 namespace Unity.Entities.Editor
 {
@@ -79,7 +80,42 @@ namespace Unity.Entities.Editor
             base.OnDestroy();
         }
 
-#if !DOTS_DISABLE_DEBUG_NAMES         
+        // Must be called on the main thread (EditorUtility.EntityIdToObject that can only be called on the main thread)
+        static HierarchyPrefabType GetPrefabType(EntityGuid entityGuid, bool hasPrefabComponent, bool hasLinkedEntityGroupComponent)
+        {
+            if (hasPrefabComponent && hasLinkedEntityGroupComponent)
+                return HierarchyPrefabType.PrefabRoot;
+
+            if (entityGuid != EntityGuid.Null)
+            {
+                var gameObject = EditorUtility.EntityIdToObject(entityGuid.OriginatingEntityId) as UnityEngine.GameObject;
+                if (gameObject)
+                {
+                    if (PrefabUtility.IsAnyPrefabInstanceRoot(gameObject))
+                        return HierarchyPrefabType.PrefabRoot;
+
+                    if (PrefabUtility.IsPartOfAnyPrefab(gameObject))
+                        return HierarchyPrefabType.PrefabPart;
+                }
+            }
+
+            if (hasPrefabComponent)
+                return HierarchyPrefabType.PrefabPart;
+
+            return HierarchyPrefabType.None;
+        }
+
+        HierarchyPrefabType ComputePrefabTypeForEntity(Entity entity)
+        {
+            bool hasPrefabComponent = EntityManager.HasComponent<Prefab>(entity);
+            bool hasLinkedEntityGroupComponent = EntityManager.HasBuffer<LinkedEntityGroup>(entity);
+            var guid = EntityGuid.Null;
+            if (EntityManager.HasComponent<EntityGuid>(entity))
+                guid = EntityManager.GetComponentData<EntityGuid>(entity);
+            return GetPrefabType(guid, hasPrefabComponent, hasLinkedEntityGroupComponent);
+        }
+
+#if !DOTS_DISABLE_DEBUG_NAMES
         [BurstCompile]
         static void GetNodeName(ref EntityNameStoreAccess nameAccess, ref Entity entity, ref FixedString64Bytes name)
         {
@@ -216,9 +252,9 @@ namespace Unity.Entities.Editor
                     OnRemoveEntityNodes?.Invoke(m_HierarchyEntityChanges.DestroyedEntities);
                 }
             }
-            
+
             if (!m_HierarchyEntityChanges.CreatedEntities.IsEmpty)
-                CreateNewNodes();   
+                CreateNewNodes();
 
             using (k_ReparentEntityNodesMarker.Auto())
             {
@@ -257,10 +293,10 @@ namespace Unity.Entities.Editor
                 }
             }
         }
-        
+
         unsafe void CreateNewNodes()
         {
-#if !DOTS_DISABLE_DEBUG_NAMES                
+#if !DOTS_DISABLE_DEBUG_NAMES
             var entityNameStoreAccess = EntityManager.GetCheckedEntityDataAccess()->EntityComponentStore->NameStoreAccess;
 #endif
             var parents = new NativeList<Entity>(m_HierarchyEntityChanges.CreatedEntities.Length, Allocator.TempJob);
@@ -281,24 +317,15 @@ namespace Unity.Entities.Editor
                 var e = m_HierarchyEntityChanges.CreatedEntities[i];
                 if (!showHiddenEntities && EntityManager.HasComponent<HideInHierarchy>(e))
                     continue;
-                
+
 #if DOTS_DISABLE_DEBUG_NAMES
                 var name = e.ToFixedString();
-#else                        
+#else
                 var name = default(FixedString64Bytes);
                 GetNodeName(ref entityNameStoreAccess, ref e, ref name);
-#endif              
-                var prefabType = HierarchyPrefabType.None;
-                if (EntityManager.HasComponent<Prefab>(e))
-                {
-                    if (EntityManager.HasBuffer<LinkedEntityGroup>(e))
-                        prefabType = HierarchyPrefabType.PrefabRoot;
-                    else
-                    {
-                        prefabType = HierarchyPrefabType.PrefabPart;
-                    }
-                }
-                
+#endif
+                var prefabType = ComputePrefabTypeForEntity(e);
+
                 // Root entities can be subscene, section, prefab roots, root entities
                 if (!SystemAPI.TryGetComponent(e, out Parent parentComp))
                 {
@@ -306,8 +333,8 @@ namespace Unity.Entities.Editor
                     {
                         var data = new HierarchyEntityNodeData()
                         {
-                            Entity = e, 
-                            EntityName = GetSubSceneName(EntityManager, e), 
+                            Entity = e,
+                            EntityName = GetSubSceneName(EntityManager, e),
                             PrefabType = prefabType
                         };
                         subsceneEntityNodes.Add(data);
@@ -318,7 +345,7 @@ namespace Unity.Entities.Editor
                         {
                             Entity = e, EntityName = name, PrefabType = prefabType
                         };
-                        
+
                         var sceneEntity = GetSubsceneEntity(e);
                         // SceneEntity can be Entity.Null if the entity don't belong to a specific subscene. Such entity will be place under the world node
                         rootEntityNodesPerSubscene.Add(sceneEntity, data);
@@ -344,7 +371,7 @@ namespace Unity.Entities.Editor
                         };
                         looseChildren.Add(data);
                     }
-                    
+
                     totalChildrenEntityCount++;
                 }
 
@@ -358,7 +385,7 @@ namespace Unity.Entities.Editor
             // Add any new subscene entity nodes below the world node
             OnAddSubSceneNodes?.Invoke(World, subsceneEntityNodes.AsArray());
             subsceneEntityNodes.Dispose();
-            
+
             OnAddEntityNodes?.Invoke(World, Entity.Null, looseChildren.AsArray());
             looseChildren.Dispose();
 
@@ -401,8 +428,37 @@ namespace Unity.Entities.Editor
             // Populate the HierarchyEntityNodeData buffer used to create hierarchy entity nodes
             var childLookup = GetBufferLookup<Child>(true);
             var hideInHierarchyLookup = GetComponentLookup<HideInHierarchy>(true);
-            var prefabLookup = GetComponentLookup<Prefab>(true);
             var linkedEntityGroupLookup = GetBufferLookup<LinkedEntityGroup>(true);
+
+            // Pre-compute prefab types on main thread
+            var prefabTypeLookup = new NativeHashMap<Entity, HierarchyPrefabType>(totalChildrenEntityCount, Allocator.TempJob);
+            for (var i = 0; i < parents.Length; i++)
+            {
+                var parent = parents[i];
+                if (EntityManager.HasBuffer<Child>(parent))
+                {
+                    var children = EntityManager.GetBuffer<Child>(parent);
+                    for (var j = 0; j < children.Length; j++)
+                    {
+                        var childEntity = children[j].Value;
+                        if (!showHiddenEntities && EntityManager.HasComponent<HideInHierarchy>(childEntity))
+                            continue;
+                        prefabTypeLookup[childEntity] = ComputePrefabTypeForEntity(childEntity);
+                    }
+                }
+                else if (EntityManager.HasComponent<Prefab>(parent) && EntityManager.HasBuffer<LinkedEntityGroup>(parent))
+                {
+                    var children = EntityManager.GetBuffer<LinkedEntityGroup>(parent);
+                    for (var j = 0; j < children.Length; j++)
+                    {
+                        var childEntity = children[j].Value;
+                        if (EntityManager.HasComponent<HideInHierarchy>(childEntity))
+                            continue;
+                        prefabTypeLookup[childEntity] = ComputePrefabTypeForEntity(childEntity);
+                    }
+                }
+            }
+
             var childrenEntityNodeData =
                 new NativeParallelMultiHashMap<Entity, HierarchyEntityNodeData>(parents.Length + totalChildrenEntityCount, Allocator.TempJob);
             var populateBufferJob = new PopulateParentBuffersJob
@@ -411,10 +467,10 @@ namespace Unity.Entities.Editor
                 ChildLookup = childLookup,
                 ShowHiddenEntities = showHiddenEntities,
                 HideInHierarchyLookup = hideInHierarchyLookup,
-                PrefabLookup = prefabLookup,
                 LinkedEntityGroupLookup = linkedEntityGroupLookup,
+                PrefabTypeLookup = prefabTypeLookup,
                 OutputBuffers = childrenEntityNodeData.AsParallelWriter(),
-#if !DOTS_DISABLE_DEBUG_NAMES                    
+#if !DOTS_DISABLE_DEBUG_NAMES
                 NameStoreAccess = EntityManager.GetCheckedEntityDataAccess()->EntityComponentStore->NameStoreAccess,
 #endif
             };
@@ -458,7 +514,8 @@ namespace Unity.Entities.Editor
 
             entityLevels.Dispose();
             childrenEntityNodeData.Dispose();
-            parents.Dispose();            
+            prefabTypeLookup.Dispose();
+            parents.Dispose();
         }
 
         bool IsParent(Entity e)
@@ -475,12 +532,12 @@ namespace Unity.Entities.Editor
             [ReadOnly] public BufferLookup<Child> ChildLookup;
             [ReadOnly] public bool ShowHiddenEntities;
             [ReadOnly] public ComponentLookup<HideInHierarchy> HideInHierarchyLookup;
-            [ReadOnly] public ComponentLookup<Prefab> PrefabLookup;
             [ReadOnly] public BufferLookup<LinkedEntityGroup> LinkedEntityGroupLookup;
-            
-#if !DOTS_DISABLE_DEBUG_NAMES            
+            [ReadOnly] public NativeHashMap<Entity, HierarchyPrefabType> PrefabTypeLookup;
+
+#if !DOTS_DISABLE_DEBUG_NAMES
             [ReadOnly] public EntityNameStoreAccess NameStoreAccess;
-#endif 
+#endif
 
             [NativeDisableParallelForRestriction]
             public NativeParallelMultiHashMap<Entity, HierarchyEntityNodeData>.ParallelWriter OutputBuffers;
@@ -500,15 +557,8 @@ namespace Unity.Entities.Editor
                             continue;
 
                         var prefabType = HierarchyPrefabType.None;
-                        if (PrefabLookup.HasComponent(childEntity))
-                        {
-                            if (LinkedEntityGroupLookup.HasBuffer(childEntity))
-                                prefabType = HierarchyPrefabType.PrefabRoot;
-                            else
-                            {
-                                prefabType = HierarchyPrefabType.PrefabPart;
-                            }
-                        }
+                        if (PrefabTypeLookup.TryGetValue(childEntity, out var precomputedType))
+                            prefabType = precomputedType;
 
 #if DOTS_DISABLE_DEBUG_NAMES
                         var name = childEntity.ToFixedString();
@@ -524,40 +574,32 @@ namespace Unity.Entities.Editor
                         OutputBuffers.Add(e, data);
                     }
                 }
-                else if (PrefabLookup.HasComponent(e))
+                else if (LinkedEntityGroupLookup.HasBuffer(e))
                 {
-                    if (LinkedEntityGroupLookup.HasBuffer(e))
+                    var children = LinkedEntityGroupLookup[e];
+                    for (var i = 0; i < children.Length; i++)
                     {
-                        var children = LinkedEntityGroupLookup[e];
-                        for (var i = 0; i < children.Length; i++)
-                        {
-                            var childEntity = children[i].Value;
-                            if (HideInHierarchyLookup.HasComponent(childEntity))
-                                continue;
+                        var childEntity = children[i].Value;
+                        if (HideInHierarchyLookup.HasComponent(childEntity))
+                            continue;
 
-                            var prefabType = HierarchyPrefabType.None;
-                            if (PrefabLookup.HasComponent(childEntity))
-                            {
-                                if (LinkedEntityGroupLookup.HasBuffer(childEntity))
-                                    prefabType = HierarchyPrefabType.PrefabRoot;
-                                else
-                                    prefabType = HierarchyPrefabType.PrefabPart;
-                            }
+                        var prefabType = HierarchyPrefabType.None;
+                        if (PrefabTypeLookup.TryGetValue(childEntity, out var precomputedType))
+                            prefabType = precomputedType;
 
 #if DOTS_DISABLE_DEBUG_NAMES
-                            var name = childEntity.ToFixedString();
+                        var name = childEntity.ToFixedString();
 #else
-                            var name = default(FixedString64Bytes);
-                            GetNodeName(ref NameStoreAccess, ref childEntity, ref name);
-#endif                            
-                            
-                            var data = new HierarchyEntityNodeData
-                            {
-                                Entity = childEntity, EntityName = name,
-                                PrefabType = prefabType
-                            };
-                            OutputBuffers.Add(e, data);
-                        }
+                        var name = default(FixedString64Bytes);
+                        GetNodeName(ref NameStoreAccess, ref childEntity, ref name);
+#endif
+
+                        var data = new HierarchyEntityNodeData
+                        {
+                            Entity = childEntity, EntityName = name,
+                            PrefabType = prefabType
+                        };
+                        OutputBuffers.Add(e, data);
                     }
                 }
             }
@@ -578,13 +620,13 @@ namespace Unity.Entities.Editor
 
                 if (Changes.AddedParentEntities.Length > 0 && Changes.RemovedParentEntities.Length > 0)
                     RemoveDuplicate(DistinctBuffer, Changes.AddedParentEntities, Changes.RemovedParentEntities, Changes.AddedParentComponents, Changes.RemovedParentComponents);
-                
+
                 if (Changes.AddedSceneTagWithoutParentEntities.Length > 0 && Changes.RemovedSceneTagWithoutParentEntities.Length > 0)
                     RemoveDuplicate(DistinctBuffer, Changes.AddedSceneTagWithoutParentEntities, Changes.RemovedSceneTagWithoutParentEntities, Changes.AddedSceneTagWithoutParentComponents);
             }
 
-            static void RemoveDuplicate(NativeHashMap<Entity, int> index, 
-                NativeList<Entity> added, 
+            static void RemoveDuplicate(NativeHashMap<Entity, int> index,
+                NativeList<Entity> added,
                 NativeList<Entity> removed)
             {
                 index.Clear();
@@ -636,16 +678,16 @@ namespace Unity.Entities.Editor
                 var removedParentComponents = changes.RemovedParentComponents;
                 var addedSceneTag = changes.AddedSceneTagWithoutParentEntities;
                 var addedSceneTagComponents = changes.AddedSceneTagWithoutParentComponents;
-                var removedSceneTag = changes.RemovedSceneTagWithoutParentEntities;                
-                
+                var removedSceneTag = changes.RemovedSceneTagWithoutParentEntities;
+
                 var addedSet = new NativeHashSet<Entity>(added.Count, Allocator.Temp);
                 for (var i = 0; i < added.Count; ++i)
                     addedSet.Add(added[i]);
-                
+
                 var destroyedSet = new NativeHashSet<Entity>(destroyed.Count, Allocator.Temp);
                 for (var i = 0; i < destroyed.Count; ++i)
                     destroyedSet.Add(destroyed[i]);
-                
+
                 for (var i = addedParents.Count - 1; i >= 0; --i)
                 {
                     if (addedSet.Contains(addedParents[i]) || destroyedSet.Contains(addedParents[i]))
@@ -680,9 +722,9 @@ namespace Unity.Entities.Editor
                 destroyedSet.Dispose();
             }
 
-            static void RemoveDuplicate<TData>(NativeHashMap<Entity, int> index, 
-                NativeList<Entity> added, 
-                NativeList<Entity> removed, 
+            static void RemoveDuplicate<TData>(NativeHashMap<Entity, int> index,
+                NativeList<Entity> added,
+                NativeList<Entity> removed,
                 NativeList<TData> data) where TData : unmanaged
             {
                 index.Clear();
@@ -728,8 +770,8 @@ namespace Unity.Entities.Editor
 
             static unsafe void RemoveDuplicate<TData>(
                 NativeHashMap<Entity, int> index,
-                NativeList<Entity> addedEntities, 
-                NativeList<Entity> removedEntities, 
+                NativeList<Entity> addedEntities,
+                NativeList<Entity> removedEntities,
                 NativeList<TData> addedData,
                 NativeList<TData> removedData) where TData : unmanaged
             {

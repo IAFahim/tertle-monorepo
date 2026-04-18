@@ -1755,24 +1755,30 @@ namespace Unity.NetCode
             var ghostSystemState = chunk.GetNativeArray(ref ghostSystemStateType);
             // First figure out the baselines to use per entity so they can be sent as baseline + maxCount instead of one per entity
             int irrelevantCount = 0;
-            bool setIsRelevantMode = relevancyMode == GhostRelevancyMode.SetIsRelevant;
+            bool setIsRelevant = relevancyMode == GhostRelevancyMode.SetIsRelevant;
             bool chunkMatchesInternalRelevantRule = internalGlobalRelevantMask.Matches(chunk.Archetype);
             bool chunkMatchesEitherRelevantRule = chunkMatchesInternalRelevantRule || userGlobalRelevantMask.Matches(chunk.Archetype);
             for (int ent = 0, chunkEntityCount = chunk.Count; ent < chunkEntityCount; ++ent)
             {
                 bool isRelevant = chunkMatchesEitherRelevantRule | prioChunk.isRelevant;
-                var key = new RelevantGhostForConnection(NetworkId, ghost[ent].ghostId);
-                if (setIsRelevantMode)
+                if (setIsRelevant)
                 {
-                    // SetIsRelevant: defaults can mark relevant, plus explicit per-entity includes.
+                    // When using SetIsRelevant, the query and/or prioChunk fast-path can be used INSTEAD OF the hashmap,
+                    // so we only check the hashmap if we actually need to.
                     if (!isRelevant)
+                    {
+                        
+                        var key = new RelevantGhostForConnection(NetworkId, ghost[ent].ghostId);
                         isRelevant = relevantGhostForConnection.ContainsKey(key);
+                    }
                 }
-                else
+                else // When using SetIsIrrelevant, we still want the query and/or prioChunk fast-path to be a pre-filter.
                 {
-                    // SetIsIrrelevant: defaults can mark relevant, explicit per-entity set subtracts from that.
-                    if (isRelevant)
+                    if (isRelevant && !chunkMatchesInternalRelevantRule) // Don't allow a ghost matching an internal rule to be marked as irrelevant by the user.
+                    {
+                        var key = new RelevantGhostForConnection(NetworkId, ghost[ent].ghostId);
                         isRelevant = !relevantGhostForConnection.ContainsKey(key);
+                    }
                 }
 
                 ref var ghostState = ref ghostStateData.GetGhostState(ghostSystemState[ent]);

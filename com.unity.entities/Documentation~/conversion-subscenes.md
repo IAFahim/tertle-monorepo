@@ -31,12 +31,12 @@ To add an existing subscene to a scene:
 
 The [`SubScene`](xref:Unity.Scenes.SubScene) component is a Unity component that triggers baking and streaming for the referenced scene. Unity streams in the referenced scene when the `SubScene` component is enabled, if you set the `AutoLoadScene` field to true. You can also enable the **Auto Load Scene** field in the Editor. To do this, select the subscene in the Hierarchy, and in the Inspector under the Sub Scene script, enable the **Auto Load Scene** checkbox.
 
-The [`SubScene`](xref:Unity.Scenes.SubScene) component has two modes, which depend on whether the subscene is opened or closed. To open or close a subscene you can do one of the following: 
+The [`SubScene`](xref:Unity.Scenes.SubScene) component has two modes, which depend on whether the subscene is opened or closed. To open or close a subscene:
 
-* In the Hierarchy window, enable or disable the checkbox next to the subscene's name. 
-* Select a subscene, and the Inspector, under **Open SubScenes** select **Open/Close**.
+1. Select a subscene.
+2. In the Inspector, in the **Sub Scene** component, select **Open** or **Close**.
 
-![Hierarchy window with checkbox next to the subscene's name highlighted](images/SubsceneCheckBox.png)<br/>_Hierarchy window with checkbox next to the subscene's name highlighted_
+    ![Hierarchy window with a subscene selected. The Open button is highlighted.](images/ecs-subscene-open.png)<br/>_Hierarchy window with a subscene selected. Select Open to open the subscene._
 
 When a subscene is open, the following happens:
 

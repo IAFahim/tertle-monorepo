@@ -176,7 +176,7 @@ namespace Unity.Entities
         /// Converts this EntityGuid to a standard C# <see cref="string"/> representation.
         /// </summary>
         /// <returns>The C# string.</returns>
-        public override string ToString() => $"{OriginatingEntityId}:{OriginatingSubEntityId}:{FullNamespaceId:x8}:{Serial:x8}";
+        public override string ToString() => $"{EntityId.ToULong(OriginatingEntityId)}:{EntityId.ToULong(OriginatingSubEntityId)}:{FullNamespaceId:x8}:{Serial:x8}";
     }
 
     /// <summary>

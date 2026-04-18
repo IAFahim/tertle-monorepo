@@ -392,6 +392,22 @@ public partial class IfeDescription
                 {
                     case ForEachVariableStatementSyntax { Variable: TupleExpressionSyntax tupleExpressionSyntax }:
                     {
+                        //Check that the ordering is correct if .WithEntityAccess() is used.
+                        if (_entityAccessRequired && tupleExpressionSyntax.Arguments.Count > 0)
+                        {
+                            var lastArg = tupleExpressionSyntax.Arguments.Last();
+                            if (lastArg.Expression is DeclarationExpressionSyntax lastDecl)
+                            {
+                                var lastTypeSymbol = SystemDescription.SemanticModel.GetTypeInfo(lastDecl.Type).Type;
+                                if (lastTypeSymbol?.Name != "Entity")
+                                {
+                                    IfeCompilerMessages.SGFE014(SystemDescription, Location);
+                                    Success = false;
+                                    return;
+                                }
+                            }
+                        }
+
                         // Original code: foreach ((RefRW<TypeA> a, RefRO<TypeB> b) in SystemAPI.Query<RefRW<TypeA>, RefRO<TypeB>>())
                         // Patched code: foreach ((UncheckedRefRW<TypeA> a, UncheckedRefRO<TypeB> b) in generatedIfeEnumerator)
                         for (var index = 0; index < tupleExpressionSyntax.Arguments.Count; index++)
@@ -428,6 +444,19 @@ public partial class IfeDescription
                             // Patched code: foreach ((UncheckedRefRW<TypeA>, UncheckedRefRO<TypeB>) result in generatedIfeEnumerator)
                             case TupleTypeSyntax tupleTypeSyntax:
                             {
+                                // Check that the ordering is correct if .WithEntityAccess() is used.
+                                if (_entityAccessRequired && tupleTypeSyntax.Elements.Count > 0)
+                                {
+                                    var lastElement = tupleTypeSyntax.Elements.Last();
+                                    var lastTypeSymbol = SystemDescription.SemanticModel.GetTypeInfo(lastElement.Type).Type;
+                                    if (lastTypeSymbol?.Name != "Entity")
+                                    {
+                                        IfeCompilerMessages.SGFE014(SystemDescription, Location);
+                                        Success = false;
+                                        return;
+                                    }
+                                }
+
                                 for (int i = 0; i < AllIterableQueryDatas.Count; i++)
                                 {
                                     var queryData = AllIterableQueryDatas.ElementAt(i);

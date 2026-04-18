@@ -64,21 +64,13 @@ This example creates an authoring GameObject called **Spawner** to provide a way
 
 The ECS framework converts a GameObject prefab into an entity prefab as soon as you select it in the **Prefab** field. To observe this behavior, do the following:
 
-1. Open the **Entities Hierarchy** window using the menu **Window** > **Entities** > **Hierarchy**.
+1. In the **Hierarchy** window, select the **Spawner** GameObject, and ensure that it has the **Cube** prefab selected in the Prefab field.
 
-2. In the regular **Hierarchy** window, select the **Spawner** GameObject.
+2. Under the [Editor World node](editor-hierarchy-world-node.md), expand the **ECS example** converted subscene.
 
-3. In the **Entities Hierarchy** window, switch to the **Runtime** data mode.
+    If the **Spawner** GameObject has the **Cube** prefab selected in the Prefab field, the Hierarchy displays the **Cube** entity prefab with a blue icon and blue name under the world node, in addition to the Spawner entity. The `GetEntity` method call in the code example converts the original GameObject prefab into the entity prefab.
 
-    If the **Spawner** GameObject has the **Cube** prefab selected in the Prefab field, the **Entities Hierarchy** should display a view similar to this:
-
-    ![The Spawner GameObject in the regular Hierarchy window, and the Spawner entity in Entities Hierarchy.](images/getting-started/ecs-entities-hierarchy-prefab-view.png)
-
-    The screenshot displays the following:
-
-    * The regular **Hierarchy** window with the **Spawner** GameObject.
-    * The **Inspector** window in the **Authoring** [data mode](editor-authoring-runtime.md). You can edit the properties on the **Spawner** GameObject from the Editor.
-    * The **Entities Hierarchy** window in the **Runtime** [data mode](editor-authoring-runtime.md). In addition to the Spawner entity, this window displays the **Cube** entity prefab, which has the blue icon next to it. The `GetEntity` method call in the code example converts the original GameObject prefab into the entity prefab.
+    ![The Spawner GameObject in the Hierarchy window, and the Cube entity prefab under the world node.](images/getting-started/ecs-entities-hierarchy-prefab-view.png)<br/>_The Spawner GameObject in the Hierarchy window, and the Cube entity prefab under the world node._
 
 The next step describes how to create a system that instantiates the entity prefab.
 
@@ -122,13 +114,13 @@ Enter **Play** mode. The `SpawnerSystem` system starts creating instances of ent
 
 If you followed the instructions in the [Authoring and baking workflow example](ecs-workflow-example-authoring-baking.md) and your project has the `RotationSystem.cs` script, the prefabs should spin in the **Game** view.
 
-Pause **Play** mode. Open the [**Entities Hierarchy**](editor-hierarchy-window.md) window and switch to the **Runtime** [data mode](editor-authoring-runtime.md).
+Pause **Play** mode. In the **Hierarchy** window, expand the [Default World node](editor-hierarchy-world-node.md) to see the instantiated entity prefabs.
 
-![The Entities Hierarchy window displays the instantiated entity prefabs.](images/getting-started/ecs-entities-prefabs-instantiated.png)
+![The Hierarchy window displays the instantiated entity prefabs.](images/getting-started/ecs-entities-prefabs-instantiated.png)
 
-The window highlights the source entity prefab with the solid blue icon, and the instantiated entity prefabs with hollow grey icons and blue names.
+The Hierarchy highlights the entity prefab root with the solid blue icon and a blue name, and the child prefab entities with a regular entitiy icon and a blue name. Entity prefab instances have regular entitiy icons with blue names.
 
-Select the source entity prefab and view it in the **Inspector** window in the **Runtime** [data mode](editor-authoring-runtime.md). Notice that it has the **Prefab** tag in the **Tags** section. This tag excludes the source prefab from system queries that affect the instances of the prefab.
+Select the entity prefab to view it in the [Entity Inspector](editor-entity-inspector.md). Notice that it has the **Prefab** tag in the **Tags** section. This tag excludes the source prefab from system queries that affect the instances of the prefab.
 
 ## Additional resources
 

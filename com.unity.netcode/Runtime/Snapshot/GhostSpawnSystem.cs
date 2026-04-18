@@ -381,7 +381,11 @@ namespace Unity.NetCode
         }
     }
 
-    internal struct PendingGameObjectSpawn : IComponentData
+    /// <summary>
+    /// Since GameObject side of the spawn is deferred to later (so that we can have the right values coming from GhostUpdateSystem while in Awake),
+    /// we mark it as pending and SetActive later to control when Awake gets triggered. This way user logic in Awake has non-default GhostField values.
+    /// </summary>
+    internal struct PendingClientGameObjectSpawn : IComponentData
     {
         public bool ShouldBeActive;
     }
@@ -405,7 +409,7 @@ namespace Unity.NetCode
             }
 
             using var builder = new EntityQueryBuilder(Allocator.Temp);
-            m_PendingSpawnQuery = this.EntityManager.CreateEntityQuery(builder.WithAll<PendingGameObjectSpawn, GhostInstance>());
+            m_PendingSpawnQuery = this.EntityManager.CreateEntityQuery(builder.WithAll<PendingClientGameObjectSpawn, GhostInstance>());
             RequireForUpdate(m_PendingSpawnQuery);
         }
 
@@ -415,7 +419,7 @@ namespace Unity.NetCode
             // Design note: we could potentially move the burstable part of this system to the spawn system, with the entities spawn logic. But it'd make potential GO batching a bit harder and it'd also mean you'd get non-initialized GOs present for a few systems before they are initialized later in this system. If there's custom user systems introduced in between, this could be weird.
             using var pendingEntities = m_PendingSpawnQuery.ToEntityArray(Allocator.Temp);
             using var ghostInstances = m_PendingSpawnQuery.ToComponentDataArray<GhostInstance>(Allocator.Temp);
-            using var pendingSpawn = m_PendingSpawnQuery.ToComponentDataArray<PendingGameObjectSpawn>(Allocator.Temp);
+            using var pendingSpawn = m_PendingSpawnQuery.ToComponentDataArray<PendingClientGameObjectSpawn>(Allocator.Temp);
             using NativeList<EntityId> objectsToReenable = new NativeList<EntityId>(pendingEntities.Length, Allocator.Temp);
             var prefabsEntity = SystemAPI.GetSingletonEntity<GhostCollection>();
             var prefabs = EntityManager.GetBuffer<GhostCollectionPrefab>(prefabsEntity).ToNativeArray(Allocator.Temp);
@@ -440,7 +444,7 @@ namespace Unity.NetCode
                 // TODO-release@potentialOptim we can also potentially burst this
                 GameObject.SetGameObjectsActive(prefabId, false); // TODO-release@potentialOptim We can potentially apply the setactive only once per prefab (have a bool to mark them as "already disabled" and add them in a list to be reenabled at the end of the system OnUpdate). But the set active is already pretty quick, especially compared to the actual GameObject Instantiate.
                 GameObject.InstantiateGameObjects(goPrefab, 1, instances, transformInstances);
-                var shouldPrefabBeActive = EntityManager.GetComponentData<PendingGameObjectSpawn>(prefabEntity).ShouldBeActive;
+                var shouldPrefabBeActive = EntityManager.GetComponentData<PendingClientGameObjectSpawn>(prefabEntity).ShouldBeActive;
                 GameObject.SetGameObjectsActive(prefabId, shouldPrefabBeActive);
 
                 var link = new GhostGameObjectLink(instances[0], transformInstances[0]);
@@ -477,25 +481,35 @@ namespace Unity.NetCode
             // This needs to execute in this system, since we want state to be accessible in Awake (and so this system needs to execute after GhostUpdateSystem)
             GameObject.SetGameObjectsActive(objectsToReenable.AsArray(), true); // Triggers the Awake
 
-            EntityManager.RemoveComponent<PendingGameObjectSpawn>(m_PendingSpawnQuery);
+            EntityManager.RemoveComponent<PendingClientGameObjectSpawn>(m_PendingSpawnQuery);
         }
 
-        public static bool TryGetAutomaticWorld(out WorldUnmanaged world)
+        internal static void TryGetAndValidateWorldForSpawn(out WorldUnmanaged world)
         {
-            if (Netcode.IsClientRole && Netcode.Client.NetworkTime.IsInPredictionLoop)
+            var worldCandidate = Netcode.Instance.m_ActiveWorld;
+            string invalidWorldMessage = $"Invalid world {worldCandidate} for spawn. You can only spawn a ghost on a server or during prediction on a client.";
+
+            if (!worldCandidate.ExistsAndIsCreated())
             {
-                Assert.IsTrue(ClientServerBootstrap.ClientWorld != null && ClientServerBootstrap.ClientWorld.IsCreated, "sanity check failed, trying to spawn a client ghost but with invalid client world");
-                world = ClientServerBootstrap.ClientWorld.Unmanaged;
-                return true;
+                // Can't elegantly fail with this, so we just throw
+                throw new InvalidOperationException(invalidWorldMessage);
             }
 
-            if (ClientServerBootstrap.ServerWorld != null && ClientServerBootstrap.ServerWorld.IsCreated)
+            world = worldCandidate.Unmanaged;
+
+            if (worldCandidate.IsClient() && Netcode.IsClientRole && worldCandidate.NetworkTime.IsInPredictionLoop)
             {
-                world = ClientServerBootstrap.ServerWorld.Unmanaged;
-                return true;
+                return;
             }
-            world = default; // this might be a valid case if the world is already linked on the ghost
-            return false;
+
+            if (worldCandidate.IsServer())
+            {
+                return;
+            }
+
+            // We log an error, but keep the spawn flow to continue as usual. The ghost will be cleaned up by systems later, the usual way.
+            // We're not throwing or interrupting the spawn here in order to not fight the existing logic for handling bad spawns.
+            Debug.LogError(invalidWorldMessage);
         }
     }
 }

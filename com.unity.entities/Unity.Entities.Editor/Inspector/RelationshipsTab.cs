@@ -6,8 +6,8 @@ using Unity.Profiling;
 using Unity.Properties;
 using Unity.Entities.UI;
 using UnityEditor;
-using UnityEditor.Search;
 using UnityEditor.UIElements;
+using UnityEngine.Pool;
 using UnityEngine.UIElements;
 
 namespace Unity.Entities.Editor
@@ -151,79 +151,53 @@ namespace Unity.Entities.Editor
             internal readonly List<string> SearchTerms = new List<string>();
             internal SystemQueriesListView systemQueriesListView;
 
-            class RelationshipsSearchView : SearchViewModel
-            {
-                readonly RelationshipsTabView m_Inspector;
-
-                public RelationshipsSearchView(RelationshipsTabView inspector)
-                    : base(new SearchViewState(SearchService.CreateContext(Array.Empty<SearchProvider>(), "")).LoadDefaults())
-                {
-                    m_Inspector = inspector;
-                    context.searchView = this;
-                }
-
-                public override void SetSearchText(string searchText, TextCursorPlacement moveCursor = TextCursorPlacement.Default)
-                {
-                    SetSearchText(searchText, moveCursor, 0);
-                }
-
-                public override void SetSearchText(string searchText, TextCursorPlacement moveCursor, int cursorInsertPosition)
-                {
-                    if (string.Equals(context.searchText.Trim(), searchText.Trim(), StringComparison.Ordinal))
-                        return;
-
-                    context.searchText = searchText;
-
-                    if (string.IsNullOrEmpty(searchText))
-                        m_Inspector.ClearSearch();
-                    else
-                        m_Inspector.ApplySearch(searchText);
-                }
-            }
+            ToolbarSearchField m_SearchField;
 
             public override VisualElement Build()
             {
-                var root = new VisualElement();
-                Resources.Templates.Inspector.RelationshipsTab.Root.AddStyles(root);
+                var root = Resources.Templates.Inspector.RelationshipsTab.Clone();
                 root.AddToClassList(UssClasses.Inspector.RelationshipsTab.Container);
 
                 Resources.AddCommonVariables(root);
                 UnityEditor.Search.SearchElement.AppendStyleSheets(root);
 
-                var searchView = new RelationshipsSearchView(this);
-                var searchField = new SearchFieldElement("RelationshipsSearch", searchView, SearchQueryBuilderViewFlags.Default);
-                searchField.AddToClassList(UssClasses.Inspector.RelationshipsTab.SearchField);
+                m_SearchField = InspectorUtility.CreateSearchField(
+                    UssClasses.Inspector.RelationshipsTab.SearchField,
+                    ApplySearch,
+                    ClearSearch);
+
+                var searchContainer = root.Q(className: "search-field-container");
+                searchContainer.Add(m_SearchField);
 
                 systemQueriesListView = new SystemQueriesListView(new List<SystemQueriesViewData>(), SearchTerms, k_MoreLabel, k_MoreLabelWithFilter);
 
-                root.Add(searchField);
-                root.Add(systemQueriesListView);
+                var contentContainer = root.Q(className: "entity-inspector-relationships-tab__content");
+                contentContainer.Add(systemQueriesListView);
                 m_EmptyMessage = new Label(Constants.Inspector.EmptyRelationshipMessage);
                 m_EmptyMessage.AddToClassList(UssClasses.Inspector.EmptyMessage);
-                root.Add(m_EmptyMessage);
+                contentContainer.Add(m_EmptyMessage);
 
                 return root;
             }
 
             internal void ClearSearch()
             {
-                var allSystems = new List<SystemQueriesView>();
+                m_SearchField.SetValueWithoutNotify(string.Empty);
+
+                using var _ = ListPool<SystemQueriesView>.Get(out var allSystems);
                 systemQueriesListView.Query<SystemQueriesView>().ToList(allSystems);
 
-                for (var i = 0; i < allSystems.Count; i++)
-                {
-                    allSystems[i].Show();
-                }
+                foreach (var system in allSystems)
+                    system.Show();
             }
 
             internal void ApplySearch(string searchText)
             {
-                var allSystems = new List<SystemQueriesView>();
+                using var _ = ListPool<SystemQueriesView>.Get(out var allSystems);
                 systemQueriesListView.Query<SystemQueriesView>().ToList(allSystems);
 
-                for (var i = 0; i < allSystems.Count; i++)
+                foreach (var system in allSystems)
                 {
-                    var system = allSystems[i];
                     var isMatch = system.Data.SystemName != null &&
                                   system.Data.SystemName.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0;
                     system.SetVisibility(isMatch);

@@ -14,9 +14,8 @@ using Unity.Core;
 using UnityEngine;
 using System.Text;
 using static Unity.Entities.TypeManager;
-#if UNITY_6000_5_OR_NEWER
 using UnityEngine.Assemblies;
-#endif
+using Unity.Scripting.LifecycleManagement;
 
 namespace Unity.Entities
 {
@@ -780,7 +779,6 @@ namespace Unity.Entities
         internal static bool IsInitialized => s_Initialized;
 
 #if !UNITY_DOTSRUNTIME
-        static bool                         s_AppDomainUnloadRegistered;
         static Dictionary<Type, TypeIndex>  s_ManagedTypeToIndex;
         static Dictionary<Type, Exception>  s_FailedTypeBuildException;
 
@@ -1577,22 +1575,6 @@ namespace Unity.Entities
                     throw new InvalidOperationException("Must be called from the main thread");
 #endif
 
-                if (!s_AppDomainUnloadRegistered)
-                {
-                    // important: this will always be called from a special unload thread (main thread will be blocking on this)
-#pragma warning disable UAC0006
-                    AppDomain.CurrentDomain.DomainUnload += (_, __) =>
-                    {
-                        if (s_Initialized)
-                            Shutdown();
-                    };
-
-                    // There is no domain unload in player builds, so we must be sure to shutdown when the process exits.
-                    AppDomain.CurrentDomain.ProcessExit += (_, __) => { Shutdown(); };
-#pragma warning restore UAC0006
-                    s_AppDomainUnloadRegistered = true;
-                }
-
                 ObjectOffset = UnsafeUtility.SizeOf<ObjectOffsetType>();
                 s_ManagedTypeToIndex = new Dictionary<Type, TypeIndex>(1000);
                 s_FailedTypeBuildException = new Dictionary<Type, Exception>();
@@ -1749,6 +1731,11 @@ namespace Unity.Entities
         /// Removes all ECS type information and any allocated memory. May only be called once globally, and must be
         /// called from the main thread.
         /// </summary>
+#if UNITY_EDITOR
+        [OnCodeUnloading]
+#else
+        [OnExitingPlayMode]
+#endif
         public static void Shutdown()
         {
             // TODO, with module loaded type info, we cannot shutdown
@@ -2642,11 +2629,7 @@ namespace Unity.Entities
             {
                 Profiler.BeginSample(nameof(InitializeAllComponentTypes));
                 var combinedComponentTypeSet = new HashSet<Type>();
-#if UNITY_6000_5_OR_NEWER
                 var assemblies = CurrentAssemblies.GetLoadedAssemblies().ToArray();
-#else
-                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-#endif
 
                     AddComponentTypeToListIfSupported(combinedComponentTypeSet, typeof(TransformRef));
 

@@ -231,7 +231,7 @@ namespace BovineLabs.Core.Tests.Iterators
                     }
                     else
                     {
-                        ref var r = ref hashMap.GetOrAddRef(key, value);
+                        ref var r = ref hashMap.GetOrAddRefUnsafe(key, value);
                         r = value;
                     }
 
@@ -247,7 +247,7 @@ namespace BovineLabs.Core.Tests.Iterators
                     }
                     else
                     {
-                        ref var r = ref hashMap.GetOrAddRef(key, value);
+                        ref var r = ref hashMap.GetOrAddRefUnsafe(key, value);
                         r = value;
                     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using Unity.Scripting.LifecycleManagement;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -1186,7 +1187,7 @@ namespace Unity.Entities
         }
 
         [BurstCompile]
-        internal struct PerChunkArray
+        internal partial struct PerChunkArray
         {
             public struct PerChunkData
             {
@@ -1206,18 +1207,18 @@ namespace Unity.Entities
                     var data = (PerChunkData*)Memory.Unmanaged.Allocate(size, CollectionHelper.CacheLineSize, Allocator.Persistent);
                     UnsafeUtility.MemClear(data, size);
                     StaticIdentifier.Ref.Data.m_PerChunkData = data;
-
-                    void Shutdown()
-                    {
-                        Memory.Unmanaged.Free(StaticIdentifier.Ref.Data.m_PerChunkData, Allocator.Persistent);
-                        StaticIdentifier.Ref.Data.m_PerChunkData = null;
-                    }
-
-#pragma warning disable UAC0006
-                    AppDomain.CurrentDomain.DomainUnload += (_, _) => Shutdown();
-                    AppDomain.CurrentDomain.ProcessExit += (_, _) => Shutdown();
-#pragma warning restore UAC0006
                 }
+            }
+
+#if UNITY_EDITOR
+            [OnCodeUnloading]
+#else
+            [OnExitingPlayMode]
+#endif
+            static void Shutdown()
+            {
+                Memory.Unmanaged.Free(StaticIdentifier.Ref.Data.m_PerChunkData, Allocator.Persistent);
+                StaticIdentifier.Ref.Data.m_PerChunkData = null;
             }
 
             sealed class StaticIdentifier

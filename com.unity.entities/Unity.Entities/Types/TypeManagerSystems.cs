@@ -12,9 +12,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Profiling;
-#if UNITY_6000_5_OR_NEWER
 using UnityEngine.Assemblies;
-#endif
 
 namespace Unity.Entities
 {
@@ -497,11 +495,7 @@ namespace Unity.Entities
                 {
                     Profiler.BeginSample(nameof(InitializeAllSystemTypes));
                     var isystemTypes = GetTypesDerivedFrom(typeof(ISystem)).ToList();
-#if UNITY_6000_5_OR_NEWER
                     foreach (var asm in CurrentAssemblies.GetLoadedAssemblies())
-#else
-                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-#endif
                     {
                         foreach (var attr in asm.GetCustomAttributes<RegisterGenericSystemTypeAttribute>())
                         {
@@ -1325,11 +1319,7 @@ namespace Unity.Entities
 #else
 
             var types = new List<Type>();
-#if UNITY_6000_5_OR_NEWER
             foreach (var assembly in CurrentAssemblies.GetLoadedAssemblies())
-#else
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-#endif
             {
                 if (!TypeManager.IsAssemblyReferencingEntities(assembly))
                     continue;
@@ -1351,11 +1341,7 @@ namespace Unity.Entities
                             types.Add(t);
                     }
 
-#if UNITY_6000_5_OR_NEWER
                     Debug.LogWarning($"DefaultWorldInitialization failed loading assembly: {(assembly.IsDynamic ? assembly.ToString() : assembly.GetLoadedAssemblyPath())}");
-#else
-                    Debug.LogWarning($"DefaultWorldInitialization failed loading assembly: {(assembly.IsDynamic ? assembly.ToString() : assembly.Location)}");
-#endif
                 }
             }
 

@@ -123,7 +123,7 @@ namespace BovineLabs.Core.Tests.Iterators
             var hashMap = this.CreateHashMap();
 
             // Test with new key
-            ref var value1 = ref hashMap.GetOrAddRef(42, 50);
+            ref var value1 = ref hashMap.GetOrAddRefUnsafe(42, 50);
             Assert.AreEqual(50, value1);
             Assert.AreEqual(1, hashMap.Count);
 
@@ -132,7 +132,7 @@ namespace BovineLabs.Core.Tests.Iterators
             Assert.AreEqual(75, hashMap[42]);
 
             // Test with existing key
-            ref var value2 = ref hashMap.GetOrAddRef(42, 125);
+            ref var value2 = ref hashMap.GetOrAddRefUnsafe(42, 125);
             Assert.AreEqual(75, value2); // Should return existing value, not default
             Assert.AreEqual(1, hashMap.Count); // Still only one element
         }
@@ -143,12 +143,12 @@ namespace BovineLabs.Core.Tests.Iterators
             var hashMap = this.CreateHashMap();
 
             // Test with new key
-            ref var value1 = ref hashMap.GetOrAddRef(42, out var wasAdded1, 50);
+            ref var value1 = ref hashMap.GetOrAddRefUnsafe(42, out var wasAdded1, 50);
             Assert.IsTrue(wasAdded1);
             Assert.AreEqual(50, value1);
 
             // Test with existing key
-            ref var value2 = ref hashMap.GetOrAddRef(42, out var wasAdded2, 125);
+            ref var value2 = ref hashMap.GetOrAddRefUnsafe(42, out var wasAdded2, 125);
             Assert.IsFalse(wasAdded2);
             Assert.AreEqual(50, value2); // Should return existing value
         }

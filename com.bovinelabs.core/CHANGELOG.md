@@ -7,6 +7,7 @@
 
 ### Changed
 * Dynamic iterator test buffers moved to top-level uniquely named types
+* Hash map `GetOrAddRef` APIs renamed to `GetOrAddRefUnsafe`, with obsolete shims left on the old names and documentation clarifying the returned ref must be consumed immediately and not used after later writes to the same container
 * `WorldSafeShutdown` moved into `BovineLabs.Core.Utility`
 * Internal Unity asmref layout cleaned up and renamed for consistency
 
@@ -15,6 +16,7 @@
 * DynamicGenerator no longer throws when generation fails
 * DynamicGenerator now imports namespaces required by generic type arguments
 * DynamicGenerator now reports nested dynamic buffer types instead of attempting invalid code generation
+* SubSceneEditorToolbar now saves edited subscenes before domain reload closes the temporary editor subscene
 * SubScene load flag filtering now only applies in build baking worlds
 * Unity 6.5 warnings in journaling/internal helpers and test fixtures
 

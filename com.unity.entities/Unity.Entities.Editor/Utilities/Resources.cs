@@ -48,12 +48,8 @@ namespace Unity.Entities.Editor
                 public static readonly VisualElementTemplate TagComponentElement = new(PackageId, "Inspector/tag-component-element");
                 public static readonly VisualElementTemplate EntityField = new(PackageId, "Inspector/entity-field");
                 public static readonly VisualElementTemplate ComponentsTab = new(PackageId, "Inspector/entity-inspector-components-tab");
+                public static readonly VisualElementTemplate RelationshipsTab = new(PackageId, "Inspector/entity-inspector-relationships-tab");
                 public static readonly VisualElementTemplate UnsupportedInspectorStyle = new(PackageId, "Inspector/unsupported-inspector");
-
-                public static class RelationshipsTab
-                {
-                    public static readonly VisualElementTemplate Root = new(PackageId, "Inspector/entity-inspector-relationships-tab");
-                }
             }
 
             public static class ContentProvider

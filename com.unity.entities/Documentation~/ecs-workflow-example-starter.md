@@ -4,7 +4,7 @@ This example demonstrates a basic Entity Component System (ECS) workflow, and in
 
 1. Create an ECS component.
 2. Create an ECS system that creates an entity and adds a component to it.
-3. View the entity in the **Entities Hierarchy** window in **Runtime** [data mode](editor-hierarchy-window.md).
+3. View the entity in the Hierarchy window in the [Default World node](editor-hierarchy-world-node.md).
 
 ## Prerequisites
 
@@ -44,23 +44,19 @@ The system creates a new entity in the [OnCreate](xref:Unity.Entities.ISystem.On
 
 In the `OnUpdate` method, the system uses a query expression to find all entities that have the `HelloComponent` component, and writes a message from the component in the console.
 
-## View the entity in Entities Hierarchy window
+## View the entity in the Hierarchy window
 
-The system creates the entity at runtime, which means that the entity is only visible in the Editor when you enter **Play** mode. Since the entity is not a GameObject, it’s not visible in the regular **Hierarchy** window. ECS provides a special [**Entities Hierarchy**](editor-hierarchy-window.md) window where you can view entities in an [ECS world](concepts-worlds.md).
+The system creates the entity at runtime, which means that the entity is only visible in the Editor when you enter **Play** mode. Since the entity is not a GameObject, it’s not visible under the subscene node. ECS provides the [**Editor/Default World**](editor-hierarchy-world-node.md) node in the Hierarchy window where you can view entities in an [ECS world](concepts-worlds.md).
 
 To view the entity that the system creates:
 
-1. Open the **Entities Hierarchy** window using the menu **Window** > **Entities** > **Hierarchy**.
+1. Enter Play mode.
 
-2. Enter Play mode.
+2. In the **Hierarchy** window, expand the [Default World node](editor-hierarchy-world-node.md). The Hierarchy displays the new entity with the `Hello World Entity` name, as defined in the `EntityManager.SetName` method.
 
-3. In the **Entities Hierarchy** window, switch to the **Runtime** [data mode](editor-hierarchy-window.md).
+3. Select the new entity to view it in the [Entity Inspector](editor-entity-inspector.md). The Inspector displays the `Hello Component`.
 
-4. The **Entities Hierarchy** window displays the new entity with the `Hello World Entity` name, as defined in the `EntityManager.SetName` method.
-
-5. Select the new entity and view it in the **Inspector** window in the **Runtime** data mode. The Inspector window displays the `Hello Component`.
-
-    ![The Entities Hierarchy window displaying the new entity. The Inspector displays the new ECS component.](images/getting-started/ecs-hello-world-entities-hierarchy-inspector.png)
+    ![The Hierarchy window displaying the new entity. The Inspector displays the new ECS component.](images/getting-started/ecs-hello-world-entities-hierarchy-inspector.png)
 
 ## Complete code
 

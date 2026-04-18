@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.Assertions;
+using Debug = UnityEngine.Debug;
 
 namespace Unity.NetCode
 {
@@ -16,6 +18,7 @@ namespace Unity.NetCode
     /// </remarks>
     /// TODO-doc look at this again once we settle on the authoring flow.
     [DisallowMultipleComponent]
+    [DebuggerDisplay("{GetDebugName(this)}")]
     // [MultiplayerRoleRestricted]
 #if NETCODE_GAMEOBJECT_BRIDGE_EXPERIMENTAL
     public // TODO-release should this actually be public to users? Couldn't it just be a hidden authoring repository of settings and that's it? It could also probably merged with GhostAuthoringComponent, just like Rigidbody can be used for baking
@@ -39,8 +42,8 @@ namespace Unity.NetCode
         // When Instantiating a server side GameObject, we need to create the associated server side entity from its prefab. So we get GameObject --> GO Prefab --> Entity Prefab and instantiate that entity prefab automatically. TODO-release The need for this should be gone with entities integration.
         [HideInInspector][SerializeField] internal GhostPrefabReference prefabReference;
         Entity m_CachedEntity;
-        World m_CachedWorld; // We don't want to keep a WorldUnmanaged here, since they can become invalid even if their IsCreated is true (as they are value types). Managed Worlds are easier to manipulate
-        bool m_WasInitialized = false;
+        NetcodeWorld m_CachedWorld; // We don't want to keep a WorldUnmanaged here, since they can become invalid even if their IsCreated is true (as they are value types). Managed Worlds are easier to manipulate
+        internal bool WasInitialized = false;
 
         // Internal note: Use case: I have a spawner that itself decides whether the GO is predicted at spawn or not --> the prefab is already created on disk.
         // post process has already done a pass and registered this. As a user, I would need a "SkipAutoRegistration" checkbox on the prefab that would prevent auto creation
@@ -72,7 +75,7 @@ namespace Unity.NetCode
         /// <summary>
         /// The world this ghost belongs to. Can be a client or server world
         /// </summary>
-        public World World
+        public NetcodeWorld World
         {
             get
             {
@@ -88,7 +91,7 @@ namespace Unity.NetCode
         /// </summary>
         void TryInitializeCachedLink()
         {
-            if (!m_WasInitialized)
+            if (!WasInitialized)
             {
                 InternalAcquireEntityReference();
             }
@@ -99,21 +102,29 @@ namespace Unity.NetCode
         /// </summary>
         internal void InternalAcquireEntityReference()
         {
-            bool entityWasCreated = false;
+            bool creatingEntity = false;
 
             {
                 // WARNING This block should disappear with entities integration. Make sure to take this into account when adding code here
-                GhostGameObjectSpawnSystem.TryGetAutomaticWorld(out var potentialWorldForSpawn); // if this is a first entity creation, this is the world we'd spawn into
                 var existingLink = GhostEntityMapping.LookupEntityReferenceGameObject(this.gameObject);
-                if (existingLink == default) entityWasCreated = true;
+                WorldUnmanaged potentialWorldForSpawn = default;
+                if (existingLink == default)
+                {
+                    creatingEntity = true;
+                    // TODO@EntitiesIntegration should keep this validation
+                    GhostGameObjectSpawnSystem.TryGetAndValidateWorldForSpawn(out potentialWorldForSpawn); // if this is a first entity creation, this is the world we'd spawn into
+                }
+
                 var link = GhostEntityMapping.AcquireEntityReferenceGameObject(this.gameObject.GetEntityId(), gameObject.transform.GetEntityId(), prefabEntityId: prefabReference.Prefab.GetEntityId(), forWorld: potentialWorldForSpawn);
 
                 InitializeWithLink(link);
             }
-            if (entityWasCreated)
+            if (creatingEntity)
             {
                 // TODO-next@startOverride once we have virtual Start override removed from GhostBehaviour, we can move some of this to the GhostAdapter awake
                 var em = World.EntityManager;
+                if (em.HasComponent<PendingClientGameObjectSpawn>(Entity))
+                    em.RemoveComponent<PendingClientGameObjectSpawn>(Entity); // Since this is an authoritative (or predicted) spawn, the client spawn system shouldn't touch this, we're already initialized here
                 var ghostInfo = em.GetComponentData<GhostGameObjectLink>(Entity);
                 ghostInfo.GhostAdapterId = GetEntityId();
                 em.SetComponentData(Entity, ghostInfo);
@@ -124,9 +135,9 @@ namespace Unity.NetCode
 
         private void InitializeWithLink(GhostEntityMapping.EntityLink link)
         {
-            m_CachedWorld = link.World.EntityManager.World;
+            m_CachedWorld = (NetcodeWorld)link.World.EntityManager.World;
             m_CachedEntity = link.Entity;
-            m_WasInitialized = true;
+            WasInitialized = true;
         }
 
         /// <summary>
@@ -134,7 +145,7 @@ namespace Unity.NetCode
         /// </summary>
         internal void InternalReleaseEntityReference()
         {
-            if (!m_WasInitialized)
+            if (!WasInitialized)
                 throw new InvalidOperationException("Sanity check failed, releasing a ghost which wasn't initialized, shouldn't be here.");
 
             GhostEntityMapping.ReleaseGameObjectEntityReference(this.gameObject, World != null && World.IsCreated);
@@ -177,16 +188,7 @@ namespace Unity.NetCode
         /// </summary>
         public bool IsPredictedGhost => World.EntityManager.HasComponent<PredictedGhost>(Entity);
 
-        internal NetworkTime NetworkTime
-        {
-            get
-            {
-                // TODO-next@NetcodeWorld with connection and NetcodeWorld refactor: cache this
-                using var query = this.World.EntityManager.CreateEntityQuery(new EntityQueryBuilder(Allocator.Temp)
-                    .WithAll<NetworkTime>());
-                return query.GetSingleton<NetworkTime>();
-            }
-        }
+        internal NetworkTime NetworkTime => this.World.NetworkTime;
 
         public bool IsServer => World.IsServer();
         public bool IsClient => World.IsClient();
@@ -271,6 +273,13 @@ namespace Unity.NetCode
             {
                 ghostBehaviour.InitializeRuntime(withInitialValue);
             }
+        }
+
+        public static string GetDebugName(GhostAdapter self)
+        {
+            if (self.WasInitialized)
+                return $"Ghost {self.Entity} world {self.World}";
+            return "not initialized";
         }
     }
 }
