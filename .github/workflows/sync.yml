@@ -33,7 +33,7 @@ jobs:
             "com.bovinelabs.core:1.6.1"
             "com.bovinelabs.recast:main"
             "com.bovinelabs.anchor:main"
-            "com.bovinelabs.bridge:main"
+            "com.bovinelabs.bridge:1.1.0"
             "com.bovinelabs.timeline:1.0.0"
             "com.bovinelabs.essence:main"
             "com.bovinelabs.reaction:2.0"
