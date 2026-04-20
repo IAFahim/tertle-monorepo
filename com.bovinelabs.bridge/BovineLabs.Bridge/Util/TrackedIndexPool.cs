@@ -2,7 +2,7 @@
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
-namespace BovineLabs.Bridge.Util
+namespace BovineLabs.Bridge
 {
     using System;
     using BovineLabs.Core.Assertions;
@@ -10,16 +10,16 @@ namespace BovineLabs.Bridge.Util
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
 
-    public unsafe readonly struct TrackedIndexPool : IDisposable
+    public unsafe struct TrackedIndexPool : IDisposable
     {
         [NativeDisableUnsafePtrRestriction]
-        private readonly UnsafeHashSet<int>* available;
+        private UnsafeHashSet<int>* available;
 
         [NativeDisableUnsafePtrRestriction]
-        private readonly UnsafeHashSet<int>* returned;
+        private UnsafeHashSet<int>* returned;
 
         [NativeDisableUnsafePtrRestriction]
-        private readonly UnsafeHashSet<int>* requests;
+        private UnsafeHashSet<int>* requests;
 
         public TrackedIndexPool(int length)
         {
@@ -45,11 +45,15 @@ namespace BovineLabs.Bridge.Util
 
         public int Length { get; }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
             CollectionCreator.Destroy(this.available);
             CollectionCreator.Destroy(this.returned);
             CollectionCreator.Destroy(this.requests);
+            this.available = null;
+            this.returned = null;
+            this.requests = null;
         }
 
         public int Get()

@@ -5,13 +5,18 @@
 #if UNITY_CINEMACHINE
 namespace BovineLabs.Bridge.Authoring.Cinemachine
 {
+    using BovineLabs.Bridge.Authoring.Spline;
     using BovineLabs.Bridge.Data.Cinemachine;
+    using Unity.Collections;
+    using BovineLabs.Core.Authoring;
     using Unity.Cinemachine;
     using Unity.Entities;
     using Unity.Mathematics;
+    using Unity.Transforms;
     using UnityEngine;
     using UnityEngine.Splines;
 
+    [ForceBakingOnDisabledComponents]
     public class CinemachineCameraBaker : Baker<CinemachineCamera>
     {
         /// <inheritdoc />
@@ -42,10 +47,21 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
 
         private void BakeCamera(Entity entity, CinemachineCamera authoring)
         {
-            this.AddComponentObject(entity, authoring);
+            var builder = new BlobBuilder(Allocator.Temp);
+            ref var nameBlob = ref builder.ConstructRoot<BlobString>();
+            builder.AllocateString(ref nameBlob, authoring.gameObject.name);
+            var nameBlobRef = builder.CreateBlobAssetReference<BlobString>(Allocator.Persistent);
+            this.AddBlobAsset(ref nameBlobRef, out _);
+            var trackingTargetBridge = this.CreateAdditionalEntity(TransformUsageFlags.WorldSpace, entityName: $"{authoring.gameObject.name} TrackingTargetBridge");
+            var lookAtTargetBridge = this.CreateAdditionalEntity(TransformUsageFlags.WorldSpace, entityName: $"{authoring.gameObject.name} LookAtTargetBridge");
+
+            this.AddComponent(trackingTargetBridge, new CMCameraTargetBridgeObject());
+            this.AddComponent(lookAtTargetBridge, new CMCameraTargetBridgeObject());
+
+            this.AddEnabledComponent<CMCameraEnabled>(entity, authoring.enabled);
             this.AddComponent(entity, new CMCamera
             {
-                Enabled = false, // Annoyingly entities ignores disabled component so they must all start enabled before conversion
+                Name = nameBlobRef,
                 TrackingTarget = this.GetEntity(authoring.Target.TrackingTarget, TransformUsageFlags.None),
                 LookAtTarget = this.GetEntity(authoring.Target.LookAtTarget, TransformUsageFlags.None),
                 CustomLookAtTarget = authoring.Target.CustomLookAtTarget,
@@ -60,6 +76,11 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 ModeOverride = authoring.Lens.ModeOverride,
                 StandbyUpdate = authoring.StandbyUpdate,
             });
+            this.AddComponent(entity, new CMCameraTargetBridgeObjects
+            {
+                TrackingTargetBridge = trackingTargetBridge,
+                LookAtTargetBridge = lookAtTargetBridge,
+            });
         }
 
         private void BakeFollow(Entity entity, CinemachineCamera authoring)
@@ -70,7 +91,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, follow);
             this.AddComponent(entity, new CMFollow
             {
                 FollowOffset = follow.FollowOffset,
@@ -86,7 +106,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, positionComposer);
             this.AddComponent(entity, new CMPositionComposer
             {
                 CameraDistance = positionComposer.CameraDistance,
@@ -107,10 +126,8 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, splineDolly);
             this.AddComponent(entity, new CMSplineDolly
             {
-                Spline = this.GetEntity(splineDolly.Spline, TransformUsageFlags.None),
                 Position = splineDolly.CameraPosition,
                 PositionUnits = splineDolly.PositionUnits,
                 SplineOffset = math.float3(splineDolly.SplineOffset),
@@ -123,6 +140,13 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 },
                 AutoDolly = ConvertAutoDolly(splineDolly.AutomaticDolly, authoring),
             });
+
+            this.AddComponent(entity, new CMSplineDollyTarget { Spline = this.GetEntity(splineDolly.Spline, TransformUsageFlags.None) });
+
+            if (splineDolly.Spline != null && splineDolly.Spline.GetComponent<SplineContainerBridgeAuthoring>() == null)
+            {
+                Debug.LogError($"CineMachineSplineDolly spline target {splineDolly.Spline} is required to have {nameof(SplineContainerBridgeAuthoring)}");
+            }
         }
 
         private void BakeRotationComposer(Entity entity, CinemachineCamera authoring)
@@ -133,7 +157,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, rotationComposer);
             this.AddComponent(entity, new CMRotationComposer
             {
                 TargetOffset = rotationComposer.TargetOffset,
@@ -152,7 +175,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, thirdPerson);
             this.AddComponent(entity, new CMThirdPersonFollow
             {
                 Damping = thirdPerson.Damping,
@@ -172,7 +194,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, orbit);
             this.AddComponent(entity, new CMOrbitFollow
             {
                 TargetOffset = orbit.TargetOffset,
@@ -195,7 +216,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, freeLookModifier);
             this.AddComponent(entity, new CMFreeLookModifier
             {
                 Easing = freeLookModifier.Easing,
@@ -294,7 +314,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, rotateWithFollowTarget);
             this.AddComponent(entity, new CMRotateWithFollowTarget
             {
                 Damping = rotateWithFollowTarget.Damping,
@@ -309,7 +328,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, hardLockToTarget);
             this.AddComponent(entity, new CMHardLockToTarget
             {
                 Damping = hardLockToTarget.Damping,
@@ -324,7 +342,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, hardLookAt);
             this.AddComponent(entity, new CMHardLookAt
             {
                 LookAtOffset = math.float3(hardLookAt.LookAtOffset),
@@ -339,7 +356,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, lookAtTargets);
             var targetsComponent = new CMSplineDollyLookAtTargets
             {
                 PathIndexUnit = lookAtTargets.Targets?.PathIndexUnit ?? PathIndexUnit.Knot,
@@ -347,14 +363,19 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
 
             this.AddComponent(entity, targetsComponent);
             var buffer = this.AddBuffer<CMSplineDollyLookAtTarget>(entity);
+            var bridgeBuffer = this.AddBuffer<CMSplineDollyLookAtTargetBridge>(entity);
 
             if (lookAtTargets.Targets == null)
             {
                 return;
             }
 
+            var index = 0;
             foreach (var dataPoint in lookAtTargets.Targets)
             {
+                var targetBridge = this.CreateAdditionalEntity(TransformUsageFlags.WorldSpace, entityName: $"SplineDollyLookAtTargetBridge {index}");
+                this.AddComponent(targetBridge, new CMCameraTargetBridgeObject());
+
                 var item = dataPoint.Value;
                 buffer.Add(new CMSplineDollyLookAtTarget
                 {
@@ -363,6 +384,8 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                     Offset = math.float3(item.Offset),
                     Easing = item.Easing,
                 });
+                bridgeBuffer.Add(new CMSplineDollyLookAtTargetBridge { Value = targetBridge });
+                index++;
             }
         }
 
@@ -374,7 +397,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, pov);
             this.AddComponent(entity, new CMPanTilt
             {
                 ReferenceFrame = pov.ReferenceFrame,
@@ -392,7 +414,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, noise);
             this.AddComponent(entity, new CMBasicMultiChannelPerlin
             {
                 PivotOffset = noise.PivotOffset,
@@ -410,7 +431,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, groupFraming);
             this.AddComponent(entity, new CMGroupFraming
             {
                 FramingMode = groupFraming.FramingMode,
@@ -433,7 +453,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, followZoom);
             this.AddComponent(entity, new CMFollowZoom
             {
                 Width = followZoom.Width,
@@ -450,7 +469,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, cameraOffset);
             this.AddComponent(entity, new CMCameraOffset
             {
                 Offset = math.float3(cameraOffset.Offset),
@@ -467,7 +485,6 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, recomposer);
             this.AddComponent(entity, new CMRecomposer
             {
                 ApplyAfter = recomposer.ApplyAfter,
@@ -488,7 +505,9 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 return;
             }
 
-            this.AddComponentObject(entity, volumeSettings);
+            var focusTargetBridge = this.CreateAdditionalEntity(TransformUsageFlags.WorldSpace, entityName: $"{authoring.gameObject.name} VolumeSettingsFocusTargetBridge");
+            this.AddComponent(focusTargetBridge, new CMCameraTargetBridgeObject());
+
             this.AddComponent(entity, new CMVolumeSettings
             {
                 Weight = volumeSettings.Weight,
@@ -497,6 +516,8 @@ namespace BovineLabs.Bridge.Authoring.Cinemachine
                 FocusOffset = volumeSettings.FocusOffset,
                 Profile = volumeSettings.Profile,
             });
+
+            this.AddComponent(entity, new CMVolumeSettingsFocusBridge { Value = focusTargetBridge });
         }
 
         private static CMFreeLookModifierLensSettings ConvertLensSettings(LensSettings lens)

@@ -2,13 +2,17 @@
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
+#if !BOVINELABS_BRIDGE_DISABLE_AUDIO
 namespace BovineLabs.Bridge.Audio
 {
+    using System;
+    using BovineLabs.Bridge.Data;
     using BovineLabs.Bridge.Data.Audio;
-    using BovineLabs.Bridge.Util;
+    using BovineLabs.Core;
     using BovineLabs.Core.Extensions;
     using Unity.Collections;
     using Unity.Entities;
+    using Unity.Mathematics;
     using UnityEngine;
     using UnityEngine.SceneManagement;
     using Object = UnityEngine.Object;
@@ -17,58 +21,98 @@ namespace BovineLabs.Bridge.Audio
     /// Syncs pooled AudioSource managed objects with entity data.
     /// This managed system handles the actual AudioSource components.
     /// </summary>
-    [UpdateInGroup(typeof(BridgeSystemGroup))]
+    [UpdateInGroup(typeof(BridgeSyncSystemGroup))]
     public partial class AudioSourcePoolSyncSystem : SystemBase
     {
-        private const HideFlags HideFlags = UnityEngine.HideFlags.HideAndDontSave;
+        private const int MusicSourceCount = 2;
+        private static readonly Type[] ComponentTypes =
+        {
+            typeof(AudioSource),
+            typeof(AudioChorusFilter),
+            typeof(AudioDistortionFilter),
+            typeof(AudioEchoFilter),
+            typeof(AudioHighPassFilter),
+            typeof(AudioLowPassFilter),
+            typeof(AudioReverbFilter),
+        };
 
-        private GameObject poolContainer;
         private NativeArray<AudioFacade> facades;
-        private TrackedIndexPool pool;
-        private int poolSize;
+        private TrackedIndexPool loopedPool;
+        private TrackedIndexPool oneShotPool;
+        private NativeArray<long> oneShotOrder;
+        private int loopedPoolSize;
+        private int oneShotPoolSize;
+        private int loopedStartIndex;
+        private int oneShotStartIndex;
+        private bool ownsMusicSources;
 
         /// <inheritdoc/>
         protected override void OnCreate()
         {
-            this.EnsurePoolContainer();
-
             this.CheckedStateRef.AddDependency<AudioSourcePool>();
-        }
-
-        /// <inheritdoc/>
-        protected override void OnDestroy()
-        {
-            if (!this.poolContainer)
-            {
-                return;
-            }
-
-            if (!this.World.IsEditorWorld())
-            {
-                Object.Destroy(this.poolContainer);
-            }
-            else
-            {
-                Object.DestroyImmediate(this.poolContainer);
-            }
         }
 
         /// <inheritdoc/>
         protected override void OnStartRunning()
         {
-            this.EntityManager.CreateSingleton<AudioSourcePool>();
+            this.EntityManager.CreateEntity<AudioSourcePool>("Audio Source Pool");
 
-            this.poolSize = SystemAPI.GetSingleton<AudioSourcePoolConfig>().LoopedAudioPoolSize;
-            this.pool = new TrackedIndexPool(this.poolSize);
+            var config = SystemAPI.GetSingleton<AudioSourcePoolConfig>();
+            this.loopedPoolSize = math.max(1, config.LoopedAudioPoolSize);
+            this.oneShotPoolSize = math.max(1, config.OneShotAudioPoolSize);
+            this.loopedStartIndex = MusicSourceCount;
+            this.oneShotStartIndex = this.loopedStartIndex + this.loopedPoolSize;
+
+            this.loopedPool = new TrackedIndexPool(this.loopedPoolSize);
+            this.oneShotPool = new TrackedIndexPool(this.oneShotPoolSize);
+            this.oneShotOrder = new NativeArray<long>(this.oneShotPoolSize, Allocator.Persistent);
             this.EnsurePool();
         }
 
+        /// <inheritdoc/>
         protected override void OnStopRunning()
         {
             this.EntityManager.DestroyEntity(this.EntityManager.GetSingletonEntity<AudioSourcePool>());
 
+            if (this.ownsMusicSources)
+            {
+                Destroy(this.facades[0]);
+            }
+
+            for (var i = MusicSourceCount; i < this.facades.Length; i++)
+            {
+                Destroy(this.facades[i]);
+            }
+
             this.facades.Dispose();
-            this.pool.Dispose();
+            this.loopedPool.Dispose();
+            this.oneShotPool.Dispose();
+            this.oneShotOrder.Dispose();
+
+            this.ownsMusicSources = false;
+            return;
+
+            void Destroy(AudioFacade f)
+            {
+                var source = f.AudioSource.Value;
+                if (!source)
+                {
+                    return;
+                }
+
+                var go = source.gameObject;
+                if (go)
+                {
+                    if (this.World.IsEditorWorld())
+                    {
+                        Object.DestroyImmediate(go);
+                    }
+                    else
+                    {
+                        Object.Destroy(go);
+                    }
+                }
+            }
         }
 
         /// <inheritdoc/>
@@ -80,24 +124,92 @@ namespace BovineLabs.Bridge.Audio
             this.EnsurePool();
 #endif
 
-            foreach (var p in this.pool.Returned)
-            {
-                this.DisableAllComponents(p);
-            }
-
-            this.pool.ClearReturned();
-
-            foreach (var p in this.pool.Requests)
-            {
-                this.DisableAllComponents(p);
-            }
-
-            this.pool.ClearRequests();
+            this.DisablePoolRequests(this.loopedPool, this.loopedStartIndex);
+            this.DisablePoolRequests(this.oneShotPool, this.oneShotStartIndex);
         }
 
-        private void DisableAllComponents(int index)
+        private void EnsurePool()
         {
-            var facade = this.facades[index];
+            if (!this.EnsurePoolCreated())
+            {
+                return;
+            }
+
+            SystemAPI.SetSingleton(new AudioSourcePool
+            {
+                AudioSources = this.facades.AsReadOnly(),
+                LoopedPool = this.loopedPool,
+                OneShotPool = this.oneShotPool,
+                OneShotOrder = this.oneShotOrder,
+                LoopedStartIndex = this.loopedStartIndex,
+                OneShotStartIndex = this.oneShotStartIndex,
+            });
+        }
+
+        private void DisablePoolRequests(TrackedIndexPool pool, int startIndex)
+        {
+            foreach (var p in pool.Returned)
+            {
+                DisableAllComponents(this.facades, startIndex + p);
+            }
+
+            pool.ClearReturned();
+
+            foreach (var p in pool.Requests)
+            {
+                DisableAllComponents(this.facades, startIndex + p);
+            }
+
+            pool.ClearRequests();
+        }
+
+        private bool EnsurePoolCreated()
+        {
+            if (this.facades.IsCreated && !this.facades[0].AudioSource.Value)
+            {
+                this.facades.Dispose();
+            }
+
+            if (this.facades.IsCreated)
+            {
+#if UNITY_EDITOR
+                if (this.facades[0].AudioSource.Value.gameObject.scene == default)
+                {
+                    foreach (var f in this.facades)
+                    {
+                        SceneManager.MoveGameObjectToScene(f.AudioSource.Value.gameObject, SceneManager.GetActiveScene());
+                    }
+                }
+#endif
+
+                return false;
+            }
+
+            var totalSize = MusicSourceCount + this.loopedPoolSize + this.oneShotPoolSize;
+            this.facades = new NativeArray<AudioFacade>(totalSize, Allocator.Persistent);
+
+            var isEditor = this.World.IsEditorWorld();
+
+            this.CreateMusicSources(isEditor);
+
+            for (var i = 0; i < this.loopedPoolSize; i++)
+            {
+                var index = this.loopedStartIndex + i;
+                CreateSource(ref this.facades, index, "AudioSourceAmbient", isEditor, true);
+            }
+
+            for (var i = 0; i < this.oneShotPoolSize; i++)
+            {
+                var index = this.oneShotStartIndex + i;
+                CreateSource(ref this.facades, index, "AudioSourceOneShot", isEditor, false);
+            }
+
+            return true;
+        }
+
+        private static void DisableAllComponents(in NativeArray<AudioFacade> facades, int index)
+        {
+            var facade = facades[index];
             facade.AudioSource.Value.enabled = false;
             facade.AudioLowPassFilter.Value.enabled = false;
             facade.AudioHighPassFilter.Value.enabled = false;
@@ -107,104 +219,110 @@ namespace BovineLabs.Bridge.Audio
             facade.AudioChorusFilter.Value.enabled = false;
         }
 
-        private void EnsurePoolContainer()
+        private static void CreateSource(
+            ref NativeArray<AudioFacade> facades, int index, string goName, bool isEditor, bool looped, bool playOnAwake = true)
         {
-            if (this.poolContainer)
-            {
-                return;
-            }
+            var go = new GameObject($"{goName}{index}", ComponentTypes);
+            var facade = CreateFacade(go);
 
-            this.poolContainer = new GameObject("AudioSourcePool");
+            facade.AudioSource.Value.playOnAwake = playOnAwake;
+            facade.AudioSource.Value.loop = looped;
+            SetFlags(go, isEditor);
+            facades[index] = facade;
+        }
 
-            if (this.World.IsEditorWorld())
+        private static void SetFlags(GameObject go, bool isEditor)
+        {
+#if UNITY_EDITOR
+            go.hideFlags = BridgeObjectConfig.Flags;
+
+            if (!isEditor)
+#endif
             {
-                this.poolContainer.hideFlags = HideFlags;
-            }
-            else
-            {
-                Object.DontDestroyOnLoad(this.poolContainer);
+                Object.DontDestroyOnLoad(go);
             }
         }
 
-        private void EnsurePool()
+        private void CreateMusicSources(bool isEditor)
         {
-            // Setup this way for editor
-            if (!this.poolContainer && this.facades.IsCreated)
+            this.ownsMusicSources = false;
+
+            // Always spawn custom for editor world
+            if (isEditor || !TryGetMusicSources(out var source0, out var source1))
             {
-                this.facades.Dispose();
+                var go = new GameObject("AudioSourceMusic");
+                SetFlags(go, isEditor);
+
+                source0 = go.AddComponent<AudioSource>();
+                source1 = go.AddComponent<AudioSource>();
+
+                this.ownsMusicSources = true;
             }
 
-            // Already setup
-            if (this.facades.IsCreated)
-            {
-#if UNITY_EDITOR
-                if (this.poolContainer.scene == default)
-                {
-                    SceneManager.MoveGameObjectToScene(this.poolContainer, SceneManager.GetActiveScene());
-                }
-#endif
+            this.SetupMusicSource(source0);
+            this.SetupMusicSource(source1);
+            this.facades[0] = new AudioFacade { AudioSource = source0 };
+            this.facades[1] = new AudioFacade { AudioSource = source1 };
+        }
 
-                return;
+        private static bool TryGetMusicSources(out AudioSource source0, out AudioSource source1)
+        {
+            source0 = null;
+            source1 = null;
+
+            var musicSource = Object.FindAnyObjectByType<MusicSource>();
+            if (musicSource == null)
+            {
+                return false;
             }
 
-            this.facades = new NativeArray<AudioFacade>(this.poolSize, Allocator.Persistent);
+            var audioSources = musicSource.GetComponents<AudioSource>();
 
-            SystemAPI.SetSingleton(new AudioSourcePool
+            if (audioSources.Length < 2)
             {
-                AudioSources = this.facades.AsReadOnly(),
-                Pool = this.pool,
-            });
+                BLGlobalLogger.LogErrorString("MusicSource needs 2 audio sources");
+                return false;
+            }
+            else if (audioSources.Length > 2)
+            {
+                BLGlobalLogger.LogWarningString("MusicSource has more than 2 audio sources; only the first two will be used.");
+            }
 
-            var types = new[]
+            source0 = audioSources[0];
+            source1 = audioSources[1];
+
+            return true;
+        }
+
+        private void SetupMusicSource(AudioSource source)
+        {
+            source.playOnAwake = true;
+            source.loop = true;
+            source.spatialBlend = 0;
+            source.priority = 0; // don't want music interrupted
+        }
+
+        private static AudioFacade CreateFacade(GameObject go)
+        {
+            return new AudioFacade
             {
-                typeof(AudioSource),
-                typeof(AudioChorusFilter),
-                typeof(AudioDistortionFilter),
-                typeof(AudioEchoFilter),
-                typeof(AudioHighPassFilter),
-                typeof(AudioLowPassFilter),
-                typeof(AudioReverbFilter),
+                AudioSource = GetDisable<AudioSource>(go),
+                AudioChorusFilter = GetDisable<AudioChorusFilter>(go),
+                AudioDistortionFilter = GetDisable<AudioDistortionFilter>(go),
+                AudioEchoFilter = GetDisable<AudioEchoFilter>(go),
+                AudioHighPassFilter = GetDisable<AudioHighPassFilter>(go),
+                AudioLowPassFilter = GetDisable<AudioLowPassFilter>(go),
+                AudioReverbFilter = GetDisable<AudioReverbFilter>(go),
             };
 
-            this.EnsurePoolContainer();
-
-            var isEditor = this.World.IsEditorWorld();
-
-            for (var i = 0; i < this.facades.Length; i++)
+            static T GetDisable<T>(GameObject go)
+                where T : Behaviour
             {
-                var go = new GameObject($"AudioSource{i}", types);
-
-                var facade = new AudioFacade
-                {
-                    AudioSource = GetDisable<AudioSource>(),
-                    AudioChorusFilter = GetDisable<AudioChorusFilter>(),
-                    AudioDistortionFilter = GetDisable<AudioDistortionFilter>(),
-                    AudioEchoFilter = GetDisable<AudioEchoFilter>(),
-                    AudioHighPassFilter = GetDisable<AudioHighPassFilter>(),
-                    AudioLowPassFilter = GetDisable<AudioLowPassFilter>(),
-                    AudioReverbFilter = GetDisable<AudioReverbFilter>(),
-                };
-
-                facade.AudioSource.Value.playOnAwake = true;
-                facade.AudioSource.Value.loop = true;
-                go.transform.SetParent(this.poolContainer.transform);
-                if (isEditor)
-                {
-                    go.hideFlags = HideFlags;
-                }
-
-                this.facades[i] = facade;
-
-                continue;
-
-                T GetDisable<T>()
-                    where T : Behaviour
-                {
-                    var comp = go.GetComponent<T>();
-                    comp.enabled = false;
-                    return comp;
-                }
+                var comp = go.GetComponent<T>();
+                comp.enabled = false;
+                return comp;
             }
         }
     }
 }
+#endif

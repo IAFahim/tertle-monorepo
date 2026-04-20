@@ -1,0 +1,81 @@
+{
+    "name": "BovineLabs.Bridge.Tests",
+    "rootNamespace": "",
+    "references": [
+        "BovineLabs.Bridge",
+        "BovineLabs.Bridge.Data",
+        "BovineLabs.Core",
+        "BovineLabs.Core.Extensions",
+        "BovineLabs.Testing",
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Cinemachine",
+        "Unity.Entities",
+        "Unity.Entities.Graphics",
+        "Unity.Entities.Hybrid",
+        "Unity.Mathematics",
+        "Unity.Mathematics.Extensions",
+        "Unity.Physics",
+        "Unity.Physics.Custom",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.HighDefinition.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.Splines",
+        "Unity.Transforms",
+        "UnityEditor.TestRunner",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "BL_CORE_EXTENSIONS",
+        "BL_CORE"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.high-definition",
+            "expression": "",
+            "define": "UNITY_HDRP"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "",
+            "define": "UNITY_URP"
+        },
+        {
+            "name": "com.unity.cinemachine",
+            "expression": "",
+            "define": "UNITY_CINEMACHINE"
+        },
+        {
+            "name": "com.unity.physics",
+            "expression": "",
+            "define": "UNITY_PHYSICS"
+        },
+        {
+            "name": "com.unity.modules.terrain",
+            "expression": "",
+            "define": "UNITY_TERRAIN"
+        },
+        {
+            "name": "com.unity.splines",
+            "expression": "",
+            "define": "UNITY_SPLINES"
+        },
+        {
+            "name": "com.bovinelabs.core",
+            "expression": "",
+            "define": "BL_CORE"
+        }
+    ],
+    "noEngineReferences": false
+}

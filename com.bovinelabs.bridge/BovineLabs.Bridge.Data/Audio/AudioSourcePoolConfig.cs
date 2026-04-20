@@ -2,6 +2,7 @@
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
+#if !BOVINELABS_BRIDGE_DISABLE_AUDIO
 namespace BovineLabs.Bridge.Data.Audio
 {
     using Unity.Entities;
@@ -14,6 +15,10 @@ namespace BovineLabs.Bridge.Data.Audio
         /// </summary>
         public int LoopedAudioPoolSize;
 
-        public float MaxListenDistanceSq;
+        /// <summary>
+        /// Maximum number of AudioSource objects to keep in the one-shot pool.
+        /// </summary>
+        public int OneShotAudioPoolSize;
     }
 }
+#endif

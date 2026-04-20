@@ -17,5 +17,10 @@ namespace BovineLabs.Bridge.Data.Cinemachine
         public float FocusOffset;
         public UnityObjectRef<VolumeProfile> Profile;
     }
+
+    public struct CMVolumeSettingsFocusBridge : IComponentData
+    {
+        public Entity Value;
+    }
 }
 #endif

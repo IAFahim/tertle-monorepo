@@ -2,7 +2,7 @@
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
-#if UNITY_CINEMACHINE
+#if UNITY_CINEMACHINE && UNITY_SPLINES
 namespace BovineLabs.Bridge.Data.Cinemachine
 {
     using Unity.Cinemachine;
@@ -12,13 +12,17 @@ namespace BovineLabs.Bridge.Data.Cinemachine
 
     public struct CMSplineDolly : IComponentData
     {
-        public Entity Spline;
         public float Position;
         public PathIndexUnit PositionUnits;
         public float3 SplineOffset;
         public CinemachineSplineDolly.RotationMode CameraRotation;
         public CMSplineDollyDamping Damping;
         public CMSplineAutoDolly AutoDolly;
+    }
+
+    public struct CMSplineDollyTarget : IComponentData
+    {
+        public Entity Spline;
     }
 
     public struct CMSplineDollyDamping

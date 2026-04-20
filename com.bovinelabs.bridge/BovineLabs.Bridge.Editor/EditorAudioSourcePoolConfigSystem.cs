@@ -2,18 +2,20 @@
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
+#if !BOVINELABS_BRIDGE_DISABLE_AUDIO
 namespace BovineLabs.Bridge.Editor
 {
     using BovineLabs.Bridge.Audio;
     using BovineLabs.Bridge.Authoring;
     using BovineLabs.Bridge.Data.Audio;
     using BovineLabs.Core.Editor.Settings;
+    using BovineLabs.Core.Extensions;
     using BovineLabs.Core.Groups;
     using Unity.Entities;
 
     [WorldSystemFilter(WorldSystemFilterFlags.Editor)]
-    [UpdateInGroup(typeof(AfterTransformSystemGroup))]
-    [UpdateBefore(typeof(AudioSourcePoolPrioritySystem))]
+    [UpdateInGroup(typeof(AfterTransformSystemGroup), OrderFirst = true)]
+    [UpdateBefore(typeof(AudioSourceAmbiancePoolSystem))]
     public partial class EditorAudioSourcePoolConfigSystem : SystemBase
     {
         private Entity entity;
@@ -26,7 +28,7 @@ namespace BovineLabs.Bridge.Editor
             var configs = cameraQuery.CalculateEntityCount();
             if (configs == 0)
             {
-                this.entity = this.EntityManager.CreateEntity(typeof(AudioSourcePoolConfig));
+                this.entity = this.EntityManager.CreateEntity<AudioSourcePoolConfig>("Audio Source Pool Config");
             }
             else if (configs > 1)
             {
@@ -41,3 +43,4 @@ namespace BovineLabs.Bridge.Editor
         }
     }
 }
+#endif

@@ -2,6 +2,7 @@
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
+#if !BOVINELABS_BRIDGE_DISABLE_AUDIO
 namespace BovineLabs.Bridge.Authoring.Audio
 {
     using BovineLabs.Bridge.Data.Audio;
@@ -22,3 +23,4 @@ namespace BovineLabs.Bridge.Authoring.Audio
         }
     }
 }
+#endif

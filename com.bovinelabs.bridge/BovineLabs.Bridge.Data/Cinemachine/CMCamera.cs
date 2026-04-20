@@ -10,20 +10,7 @@ namespace BovineLabs.Bridge.Data.Cinemachine
 
     public struct CMCamera : IComponentData
     {
-        public static readonly CMCamera Default = new()
-        {
-            Priority = default,
-            FieldOfView = 40,
-            OrthographicSize = 10,
-            NearClipPlane = 0.1f,
-            FarClipPlane = 5000f,
-            Dutch = 0,
-            OutputChannel = OutputChannels.Default,
-            BlendHint = default,
-        };
-
-        public bool Enabled;
-
+        public BlobAssetReference<BlobString> Name;
         public Entity TrackingTarget;
         public Entity LookAtTarget;
         public bool CustomLookAtTarget;
@@ -41,6 +28,16 @@ namespace BovineLabs.Bridge.Data.Cinemachine
         public float Dutch;
         public LensSettings.OverrideModes ModeOverride;
         public float OrthographicSize;
+    }
+
+    public struct CMCameraTargetBridgeObjects : IComponentData
+    {
+        public Entity TrackingTargetBridge;
+        public Entity LookAtTargetBridge;
+    }
+
+    public struct CMCameraTargetBridgeObject : IComponentData
+    {
     }
 }
 #endif

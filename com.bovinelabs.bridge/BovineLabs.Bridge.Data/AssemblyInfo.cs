@@ -19,11 +19,11 @@ using UnityEngine.Rendering.HighDefinition;
 [assembly: InternalsVisibleTo("BovineLabs.Bridge.Editor")]
 [assembly: InternalsVisibleTo("BovineLabs.Bridge.Tests")]
 
+#if !BOVINELABS_BRIDGE_DISABLE_AUDIO
 [assembly: RegisterUnityEngineComponentType(typeof(AudioReverbZone))]
+#endif
 
 #if UNITY_CINEMACHINE
-[assembly: RegisterUnityEngineComponentType(typeof(CinemachineTrackingAuthoring))]
-[assembly: RegisterUnityEngineComponentType(typeof(CinemachineBrain))]
 [assembly: RegisterUnityEngineComponentType(typeof(CinemachineCamera))]
 [assembly: RegisterUnityEngineComponentType(typeof(CinemachineFollow))]
 [assembly: RegisterUnityEngineComponentType(typeof(CinemachinePositionComposer))]

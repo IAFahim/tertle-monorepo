@@ -5,7 +5,7 @@
 #if UNITY_PHYSICS && UNITY_TERRAIN
 namespace BovineLabs.Bridge.Authoring.Terrain
 {
-#if PHYSICS_CUSTOM
+#if UNITY_PHYSICS_CUSTOM
     using Unity.Physics.Authoring;
 #endif
     using BovineLabs.Core.Utility;
@@ -19,7 +19,7 @@ namespace BovineLabs.Bridge.Authoring.Terrain
     [RequireComponent(typeof(UnityEngine.TerrainCollider))]
     public class TerrainAuthoring : MonoBehaviour
     {
-#if PHYSICS_CUSTOM
+#if UNITY_PHYSICS_CUSTOM
         public PhysicsCategoryTags BelongsTo;
         public PhysicsCategoryTags CollidesWith;
 #endif
@@ -33,7 +33,7 @@ namespace BovineLabs.Bridge.Authoring.Terrain
                 var terrain = this.GetComponent<UnityEngine.TerrainCollider>();
                 this.DependsOn(terrain);
 
-#if PHYSICS_CUSTOM
+#if UNITY_PHYSICS_CUSTOM
                 var collisionFilter = new CollisionFilter
                 {
 

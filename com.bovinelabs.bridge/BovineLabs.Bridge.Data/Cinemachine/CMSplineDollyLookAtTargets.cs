@@ -2,7 +2,7 @@
 //     Copyright (c) BovineLabs. All rights reserved.
 // </copyright>
 
-#if UNITY_CINEMACHINE
+#if UNITY_CINEMACHINE && UNITY_SPLINES
 namespace BovineLabs.Bridge.Data.Cinemachine
 {
     using Unity.Entities;
@@ -20,6 +20,11 @@ namespace BovineLabs.Bridge.Data.Cinemachine
         public Entity LookAt;
         public float3 Offset;
         public float Easing;
+    }
+
+    public struct CMSplineDollyLookAtTargetBridge : IBufferElementData
+    {
+        public Entity Value;
     }
 }
 #endif

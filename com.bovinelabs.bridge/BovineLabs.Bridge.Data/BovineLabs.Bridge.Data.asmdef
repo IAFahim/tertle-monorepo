@@ -12,6 +12,7 @@
         "Unity.Entities.Hybrid",
         "Unity.InputSystem",
         "Unity.Mathematics",
+        "Unity.Mathematics.Extensions",
         "Unity.Physics",
         "Unity.Physics.Custom",
         "Unity.RenderPipelines.Core.Runtime",
@@ -26,7 +27,10 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": false,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "BL_CORE",
+        "BL_CORE_EXTENSIONS"
+    ],
     "versionDefines": [
         {
             "name": "com.unity.render-pipelines.high-definition",
@@ -52,6 +56,16 @@
             "name": "com.unity.modules.terrain",
             "expression": "",
             "define": "UNITY_TERRAIN"
+        },
+        {
+            "name": "com.unity.splines",
+            "expression": "",
+            "define": "UNITY_SPLINES"
+        },
+        {
+            "name": "com.bovinelabs.core",
+            "expression": "",
+            "define": "BL_CORE"
         }
     ],
     "noEngineReferences": false

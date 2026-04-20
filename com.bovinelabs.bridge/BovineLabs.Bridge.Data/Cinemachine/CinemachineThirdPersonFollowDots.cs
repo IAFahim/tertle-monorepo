@@ -9,7 +9,7 @@ namespace BovineLabs.Bridge.Data.Cinemachine
     using Unity.Cinemachine;
     using Unity.Entities;
     using Unity.Physics;
-#if PHYSICS_CUSTOM
+#if UNITY_PHYSICS_CUSTOM
     using Unity.Physics.Authoring;
 #endif
     using UnityEngine;
@@ -268,7 +268,7 @@ namespace BovineLabs.Bridge.Data.Cinemachine
                 return tip;
             }
 
-#if PHYSICS_CUSTOM
+#if UNITY_PHYSICS_CUSTOM
             if (this.AvoidObstacles.BelongsTo.Value == 0 || this.AvoidObstacles.CollidesWith.Value == 0)
             {
                 return tip;
@@ -286,7 +286,7 @@ namespace BovineLabs.Bridge.Data.Cinemachine
 
             var collisionFilter = new CollisionFilter
             {
-#if PHYSICS_CUSTOM
+#if UNITY_PHYSICS_CUSTOM
                 BelongsTo = this.AvoidObstacles.BelongsTo.Value,
                 CollidesWith = this.AvoidObstacles.CollidesWith.Value,
 #else
@@ -328,7 +328,7 @@ namespace BovineLabs.Bridge.Data.Cinemachine
             [Tooltip("If enabled, camera will be pulled in front of occluding obstacles")]
             public bool Enabled;
 
-#if PHYSICS_CUSTOM
+#if UNITY_PHYSICS_CUSTOM
             /// <summary> Camera will avoid obstacles on these layers. </summary>
             [Tooltip("Camera will avoid obstacles on these layers")]
             public PhysicsCategoryTags BelongsTo;
@@ -366,7 +366,7 @@ namespace BovineLabs.Bridge.Data.Cinemachine
             internal static ObstacleSettings Default => new()
             {
                 Enabled = false,
-#if PHYSICS_CUSTOM
+#if UNITY_PHYSICS_CUSTOM
                 BelongsTo = PhysicsCategoryTags.Everything,
                 CollidesWith = PhysicsCategoryTags.Everything,
 #else
