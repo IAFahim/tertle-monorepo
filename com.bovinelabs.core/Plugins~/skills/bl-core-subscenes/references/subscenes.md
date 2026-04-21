@@ -4,16 +4,16 @@
 
 Use these sources when the task needs exact behavior:
 
-- `Packages/com.bovinelabs.core/Documentation~/SubScenes.md`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions.Authoring/SubScenes/SubSceneSettings.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions.Authoring/SubScenes/SubSceneSet.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions.Authoring/SubScenes/AssetSet.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions.Authoring/SubScenes/SubSceneLoadAuthoring.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions.Authoring/SubScenes/SubSceneAuthUtil.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/SubScenes/SubSceneLoadingSystem.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/SubScenes/SubSceneLoadingManagedSystem.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/SubScenes/AssetLoadingSystem.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/SubScenes/SubScenePostLoadCommandBufferSystem.cs`
+- `Documentation~/SubScenes.md`
+- `BovineLabs.Core.Extensions.Authoring/SubScenes/SubSceneSettings.cs`
+- `BovineLabs.Core.Extensions.Authoring/SubScenes/SubSceneSet.cs`
+- `BovineLabs.Core.Extensions.Authoring/SubScenes/AssetSet.cs`
+- `BovineLabs.Core.Extensions.Authoring/SubScenes/SubSceneLoadAuthoring.cs`
+- `BovineLabs.Core.Extensions.Authoring/SubScenes/SubSceneAuthUtil.cs`
+- `BovineLabs.Core.Extensions/SubScenes/SubSceneLoadingSystem.cs`
+- `BovineLabs.Core.Extensions/SubScenes/SubSceneLoadingManagedSystem.cs`
+- `BovineLabs.Core.Extensions/SubScenes/AssetLoadingSystem.cs`
+- `BovineLabs.Core.Extensions/SubScenes/SubScenePostLoadCommandBufferSystem.cs`
 
 ## Scope
 

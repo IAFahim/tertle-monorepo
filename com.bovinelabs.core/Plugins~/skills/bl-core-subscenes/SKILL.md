@@ -6,6 +6,7 @@ description: "Use when creating, wiring, extending, or debugging com.bovinelabs.
 # Core SubScenes Usage
 
 Use this skill for subscene settings/authoring, runtime load control, asset loading, and editor subscene tooling.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 

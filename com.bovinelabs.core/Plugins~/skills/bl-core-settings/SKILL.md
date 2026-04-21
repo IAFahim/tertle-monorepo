@@ -1,11 +1,12 @@
 ---
 name: bl-core-settings
-description: "Use when creating, wiring, extending, refactoring, or debugging com.bovinelabs.core settings assets and retrieval paths, including ISettings, SettingsBase, SettingsSingleton<T>, world routing, and build-time setup."
+description: "Use when creating, wiring, extending, refactoring, or debugging com.bovinelabs.core settings assets and retrieval paths, including ISettings, SettingsBase, SettingsSingleton generic patterns, world routing, and build-time setup."
 ---
 
 # Core Settings
 
 Use this skill for settings authoring, editor wiring, and runtime access patterns in core.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 

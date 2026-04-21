@@ -4,15 +4,15 @@
 
 Use these sources when the task needs exact behavior:
 
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Groups/BeforeSceneSystemGroup.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Groups/AfterSceneSystemGroup.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Groups/BeginSimulationSystemGroup.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Groups/BeforeTransformSystemGroup.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Groups/AfterTransformSystemGroup.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Groups/RelevancySystemGroup.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Groups/BLSimulationSystemGroup.cs`
-- `Packages/com.bovinelabs.core/Documentation~/LifeCycle.md`
-- `Packages/com.bovinelabs.core/Documentation~/Pause.md`
+- `BovineLabs.Core.Extensions/Groups/BeforeSceneSystemGroup.cs`
+- `BovineLabs.Core.Extensions/Groups/AfterSceneSystemGroup.cs`
+- `BovineLabs.Core.Extensions/Groups/BeginSimulationSystemGroup.cs`
+- `BovineLabs.Core.Extensions/Groups/BeforeTransformSystemGroup.cs`
+- `BovineLabs.Core.Extensions/Groups/AfterTransformSystemGroup.cs`
+- `BovineLabs.Core.Extensions/Groups/RelevancySystemGroup.cs`
+- `BovineLabs.Core.Extensions/Groups/BLSimulationSystemGroup.cs`
+- `Documentation~/LifeCycle.md`
+- `Documentation~/Pause.md`
 
 ## Core Rule
 

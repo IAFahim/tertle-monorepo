@@ -6,6 +6,7 @@ description: "Use when placing, creating, or debugging com.bovinelabs.core syste
 # Core System Groups Usage
 
 Use this skill for choosing `com.bovinelabs.core` system-group placement and debugging update ordering.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 

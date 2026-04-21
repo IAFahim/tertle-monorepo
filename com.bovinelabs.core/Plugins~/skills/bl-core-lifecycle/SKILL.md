@@ -6,6 +6,7 @@ description: "Use when designing, implementing, extending, refactoring, or debug
 # Core Lifecycle Usage
 
 Use this skill for entity lifecycle behavior in core extensions: initialization, destruction, and phase-ordered command buffering.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 

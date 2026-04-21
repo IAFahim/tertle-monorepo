@@ -6,6 +6,7 @@ description: "Use when creating, refactoring, or debugging com.bovinelabs.core I
 # Core Entity Commands Usage
 
 Use this skill for reusable entity builder code that must work across baking, runtime command buffers, jobs, and tests/editor setup.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 

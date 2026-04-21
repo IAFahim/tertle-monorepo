@@ -6,10 +6,11 @@ description: "Use when creating, extending, refactoring, or debugging com.bovine
 # Core Object Management Usage
 
 Use this skill for object definition/group authoring, LookupAuthoring bake wiring, and runtime lookup behavior.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 
-1. Read these baseline sources first:
+1. Read these baseline package sources first:
    - `Documentation~/ObjectManagement.md`
    - `BovineLabs.Core.Extensions.Authoring/ObjectManagement/ObjectManagementSettingsBase.cs`
 2. Select and read only the focused reference files required for the task.

@@ -6,6 +6,7 @@ description: "Use when creating, extending, refactoring, or debugging com.bovine
 # Core States Usage
 
 Use this skill for app or feature state systems built on `com.bovinelabs.core` state models and registration APIs.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 

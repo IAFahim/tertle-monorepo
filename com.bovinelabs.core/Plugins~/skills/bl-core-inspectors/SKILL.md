@@ -6,6 +6,7 @@ description: "Use when designing, implementing, extending, refactoring, or debug
 # Core Inspectors Usage
 
 Use this skill for inspector and property-drawer workflows in core/editor code.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 

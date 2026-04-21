@@ -6,6 +6,7 @@ description: "Use when creating, wiring, extending, or debugging com.bovinelabs.
 # Core Pause Usage
 
 Use this skill for world pause behavior, pause-aware system placement, and pause-policy debugging.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 

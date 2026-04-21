@@ -4,13 +4,13 @@
 
 Use these sources when the task needs exact behavior:
 
-- `Packages/com.bovinelabs.core/Documentation~/Pause.md`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Pause/PauseGame.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Pause/PauseUtility.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Pause/PauseRateManager.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core.Extensions/Pause/PauseLimitSystem.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core/Pause/IUpdateWhilePaused.cs`
-- `Packages/com.bovinelabs.core/BovineLabs.Core/Pause/IDisableWhilePaused.cs`
+- `Documentation~/Pause.md`
+- `BovineLabs.Core.Extensions/Pause/PauseGame.cs`
+- `BovineLabs.Core.Extensions/Pause/PauseUtility.cs`
+- `BovineLabs.Core.Extensions/Pause/PauseRateManager.cs`
+- `BovineLabs.Core.Extensions/Pause/PauseLimitSystem.cs`
+- `BovineLabs.Core/Pause/IUpdateWhilePaused.cs`
+- `BovineLabs.Core/Pause/IDisableWhilePaused.cs`
 
 ## Model
 

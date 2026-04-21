@@ -6,6 +6,7 @@ description: "Use when adding, changing, or debugging com.bovinelabs.core Config
 # Core Config Vars Usage
 
 Use this skill for ConfigVar declaration, manager wiring, and editor panel behavior.
+Resolve core package paths against `Packages/com.bovinelabs.core` or the matching `Library/PackageCache/com.bovinelabs.core@*`.
 
 ## Workflow
 
