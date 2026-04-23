@@ -16,6 +16,7 @@ namespace BovineLabs.Recast
     public unsafe struct DtNavMesh : IDisposable
     {
         private const int MaxNeighbourTiles = 32;
+        private const int NullRemoteOffMeshEntry = -1;
 
         public DtNavMeshParams parameters; // Current initialization params
         public float3 origin; // Origin of the tile (0,0)
@@ -36,6 +37,22 @@ namespace BovineLabs.Recast
 #endif
 
         private AllocatorManager.AllocatorHandle allocator;
+        private int remoteOffMeshLookupSize;
+        private int remoteOffMeshLookupMask;
+        private int* remoteOffMeshLookupBuckets;
+        private RemoteOffMeshLookupEntry* remoteOffMeshLookupEntries;
+        private int remoteOffMeshLookupEntryCount;
+        private int remoteOffMeshLookupEntryCapacity;
+        private int remoteOffMeshLookupFreeList;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RemoteOffMeshLookupEntry
+        {
+            public int2 Destination;
+            public DtTileRef SourceTileRef;
+            public int OffMeshConnectionIndex;
+            public int Next;
+        }
 
         /// <summary>Allocates a navigation mesh object.</summary>
         /// <returns>A navigation mesh that is ready for initialization, or null on failure.</returns>
@@ -118,10 +135,19 @@ namespace BovineLabs.Recast
             this.tiles = (DtMeshTile*)AllocatorManager.Allocate(this.allocator, sizeof(DtMeshTile) * this.maxTiles, UnsafeUtility.AlignOf<DtMeshTile>());
             this.positionLookup = (DtMeshTile**)AllocatorManager.Allocate(this.allocator, sizeof(DtMeshTile*) * this.tileLookupSize,
                 UnsafeUtility.AlignOf<IntPtr>());
+            this.remoteOffMeshLookupSize = this.tileLookupSize;
+            this.remoteOffMeshLookupMask = this.tileLookupMask;
+            this.remoteOffMeshLookupBuckets =
+                (int*)AllocatorManager.Allocate(this.allocator, sizeof(int) * this.remoteOffMeshLookupSize, UnsafeUtility.AlignOf<int>());
+            this.remoteOffMeshLookupEntries = null;
+            this.remoteOffMeshLookupEntryCount = 0;
+            this.remoteOffMeshLookupEntryCapacity = 0;
+            this.remoteOffMeshLookupFreeList = NullRemoteOffMeshEntry;
 
             // Initialize arrays
             UnsafeUtility.MemClear(this.tiles, sizeof(DtMeshTile) * this.maxTiles);
             UnsafeUtility.MemClear(this.positionLookup, sizeof(DtMeshTile*) * this.tileLookupSize);
+            UnsafeUtility.MemSet(this.remoteOffMeshLookupBuckets, 0xff, sizeof(int) * this.remoteOffMeshLookupSize);
 
             // Initialize free list
             this.nextFreeTile = null;
@@ -313,9 +339,11 @@ namespace BovineLabs.Recast
 
             this.ConnectInternalLinks(tile);
 
-            // Base off-mesh connections to their starting polygons and connect connections inside the tile
+            // Base off-mesh connections to their starting polygons, then stitch landings by exact destination tile.
             this.BaseOffMeshLinks(tile);
-            this.ConnectExternalOffMeshLinks(tile, tile, -1);
+            this.RegisterOffMeshLinks(tile);
+            this.ConnectOffMeshLinksFromTile(tile);
+            this.ConnectOffMeshLinksToTile(tile);
 
             // Create connections with neighbor tiles
             var neighbors = stackalloc DtMeshTile*[MaxNeighbourTiles];
@@ -331,8 +359,6 @@ namespace BovineLabs.Recast
 
                 this.ConnectExternalLinks(tile, neighbors[j], -1);
                 this.ConnectExternalLinks(neighbors[j], tile, -1);
-                this.ConnectExternalOffMeshLinks(tile, neighbors[j], -1);
-                this.ConnectExternalOffMeshLinks(neighbors[j], tile, -1);
             }
 
             // Connect with neighbor tiles
@@ -343,8 +369,6 @@ namespace BovineLabs.Recast
                 {
                     this.ConnectExternalLinks(tile, neighbors[j], i);
                     this.ConnectExternalLinks(neighbors[j], tile, Detour.OppositeTile(i));
-                    this.ConnectExternalOffMeshLinks(tile, neighbors[j], i);
-                    this.ConnectExternalOffMeshLinks(neighbors[j], tile, Detour.OppositeTile(i));
                 }
             }
 
@@ -383,6 +407,8 @@ namespace BovineLabs.Recast
             {
                 return DtStatus.Failure | DtStatus.InvalidParam;
             }
+
+            this.UnregisterOffMeshLinks(tile);
 
             // Remove tile from hash lookup
             var hash = ComputeTileHash(tile->header->x, tile->header->y, this.tileLookupMask);
@@ -432,6 +458,9 @@ namespace BovineLabs.Recast
                     this.UnconnectLinks(neighbors[j], tile);
                 }
             }
+
+            this.UnconnectRemoteIncomingOffMeshLinks(tile);
+            this.UnconnectRemoteOutgoingOffMeshLinks(tile);
 
             // Reset tile
             if ((tile->flags & DtTileFlags.TileFreeData) != 0)
@@ -1406,6 +1435,16 @@ namespace BovineLabs.Recast
                 AllocatorManager.Free(this.allocator, this.positionLookup);
             }
 
+            if (this.remoteOffMeshLookupBuckets != null)
+            {
+                AllocatorManager.Free(this.allocator, this.remoteOffMeshLookupBuckets);
+            }
+
+            if (this.remoteOffMeshLookupEntries != null)
+            {
+                AllocatorManager.Free(this.allocator, this.remoteOffMeshLookupEntries);
+            }
+
             if (this.tiles != null)
             {
                 AllocatorManager.Free(this.allocator, this.tiles);
@@ -1419,6 +1458,139 @@ namespace BovineLabs.Recast
             const uint h2 = 0xd8163841; // here arbitrarily chosen primes
             var n = (h1 * (uint)x) + (h2 * (uint)y);
             return (int)(n & (uint)mask);
+        }
+
+        private void EnsureRemoteOffMeshLookupCapacity(int additionalCount)
+        {
+            if (additionalCount <= 0)
+            {
+                return;
+            }
+
+            var requiredCapacity = this.remoteOffMeshLookupEntryCount + additionalCount;
+            if (requiredCapacity <= this.remoteOffMeshLookupEntryCapacity)
+            {
+                return;
+            }
+
+            var newCapacity = math.max(8, this.remoteOffMeshLookupEntryCapacity);
+            while (newCapacity < requiredCapacity)
+            {
+                newCapacity *= 2;
+            }
+
+            var newEntries = (RemoteOffMeshLookupEntry*)AllocatorManager.Allocate(
+                this.allocator,
+                sizeof(RemoteOffMeshLookupEntry) * newCapacity,
+                UnsafeUtility.AlignOf<RemoteOffMeshLookupEntry>());
+
+            if (this.remoteOffMeshLookupEntries != null)
+            {
+                UnsafeUtility.MemCpy(
+                    newEntries,
+                    this.remoteOffMeshLookupEntries,
+                    sizeof(RemoteOffMeshLookupEntry) * this.remoteOffMeshLookupEntryCount);
+
+                AllocatorManager.Free(this.allocator, this.remoteOffMeshLookupEntries);
+            }
+
+            this.remoteOffMeshLookupEntries = newEntries;
+            this.remoteOffMeshLookupEntryCapacity = newCapacity;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int AllocateRemoteOffMeshLookupEntry()
+        {
+            if (this.remoteOffMeshLookupFreeList != NullRemoteOffMeshEntry)
+            {
+                var entryIndex = this.remoteOffMeshLookupFreeList;
+                this.remoteOffMeshLookupFreeList = this.remoteOffMeshLookupEntries[entryIndex].Next;
+                return entryIndex;
+            }
+
+            this.EnsureRemoteOffMeshLookupCapacity(1);
+            return this.remoteOffMeshLookupEntryCount++;
+        }
+
+        private void RegisterOffMeshLinks(DtMeshTile* tile)
+        {
+            if (tile == null || tile->header == null || tile->header->offMeshConCount == 0)
+            {
+                return;
+            }
+
+            var tileRef = this.GetTileRef(tile);
+
+            for (var i = 0; i < tile->header->offMeshConCount; ++i)
+            {
+                var destination = this.GetOffMeshConnectionDestinationTile(tile->offMeshCons[i].EndPos);
+                var hash = ComputeTileHash(destination.x, destination.y, this.remoteOffMeshLookupMask);
+                var entryIndex = this.AllocateRemoteOffMeshLookupEntry();
+
+                this.remoteOffMeshLookupEntries[entryIndex] = new RemoteOffMeshLookupEntry
+                {
+                    Destination = destination,
+                    SourceTileRef = tileRef,
+                    OffMeshConnectionIndex = i,
+                    Next = this.remoteOffMeshLookupBuckets[hash],
+                };
+
+                this.remoteOffMeshLookupBuckets[hash] = entryIndex;
+            }
+        }
+
+        private void UnregisterOffMeshLinks(DtMeshTile* tile)
+        {
+            if (tile == null || tile->header == null || tile->header->offMeshConCount == 0)
+            {
+                return;
+            }
+
+            var tileRef = this.GetTileRef(tile);
+            for (var i = 0; i < tile->header->offMeshConCount; ++i)
+            {
+                var destination = this.GetOffMeshConnectionDestinationTile(tile->offMeshCons[i].EndPos);
+                this.RemoveRemoteOffMeshLookupEntry(destination, tileRef, i);
+            }
+        }
+
+        private void RemoveRemoteOffMeshLookupEntry(int2 destination, DtTileRef sourceTileRef, int offMeshConnectionIndex)
+        {
+            var hash = ComputeTileHash(destination.x, destination.y, this.remoteOffMeshLookupMask);
+            var entryIndex = this.remoteOffMeshLookupBuckets[hash];
+            var previousEntryIndex = NullRemoteOffMeshEntry;
+
+            while (entryIndex != NullRemoteOffMeshEntry)
+            {
+                ref var entry = ref this.remoteOffMeshLookupEntries[entryIndex];
+                if (entry.Destination.Equals(destination) &&
+                    entry.SourceTileRef == sourceTileRef &&
+                    entry.OffMeshConnectionIndex == offMeshConnectionIndex)
+                {
+                    if (previousEntryIndex == NullRemoteOffMeshEntry)
+                    {
+                        this.remoteOffMeshLookupBuckets[hash] = entry.Next;
+                    }
+                    else
+                    {
+                        this.remoteOffMeshLookupEntries[previousEntryIndex].Next = entry.Next;
+                    }
+
+                    entry.Next = this.remoteOffMeshLookupFreeList;
+                    this.remoteOffMeshLookupFreeList = entryIndex;
+                    return;
+                }
+
+                previousEntryIndex = entryIndex;
+                entryIndex = entry.Next;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int2 GetOffMeshConnectionDestinationTile(in float3 endPosition)
+        {
+            this.CalculateTileLocation(endPosition, out var tileX, out var tileY);
+            return new int2(tileX, tileY);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1669,73 +1841,240 @@ namespace BovineLabs.Recast
             }
         }
 
-        private void ConnectExternalOffMeshLinks(DtMeshTile* tile, DtMeshTile* target, int side)
+        private void ConnectOffMeshLinksFromTile(DtMeshTile* tile)
         {
-            if (tile == null)
+            if (tile == null || tile->header == null || tile->header->offMeshConCount == 0)
             {
                 return;
             }
 
-            var oppositeSide = side == -1 ? byte.MaxValue : Detour.OppositeTile((byte)side);
-
-            // Connect off-mesh links which land from the target tile to this tile.
-            for (var i = 0; i < target->header->offMeshConCount; ++i)
+            for (var i = 0; i < tile->header->offMeshConCount; ++i)
             {
-                var targetConnection = &target->offMeshCons[i];
-                if (targetConnection->side != oppositeSide)
+                this.ReconnectOffMeshLink(tile, i);
+            }
+        }
+
+        private void ConnectOffMeshLinksToTile(DtMeshTile* tile)
+        {
+            if (tile == null || tile->header == null)
+            {
+                return;
+            }
+
+            var tileRef = this.GetTileRef(tile);
+            var destination = new int2(tile->header->x, tile->header->y);
+            var hash = ComputeTileHash(destination.x, destination.y, this.remoteOffMeshLookupMask);
+            var entryIndex = this.remoteOffMeshLookupBuckets[hash];
+
+            while (entryIndex != NullRemoteOffMeshEntry)
+            {
+                ref var entry = ref this.remoteOffMeshLookupEntries[entryIndex];
+                if (entry.Destination.Equals(destination) &&
+                    entry.SourceTileRef != tileRef &&
+                    this.TryGetOffMeshLookupSourceTile(entry.SourceTileRef, entry.OffMeshConnectionIndex, out var sourceTile))
                 {
-                    continue;
+                    this.ReconnectOffMeshLink(sourceTile, entry.OffMeshConnectionIndex);
                 }
 
-                var targetPoly = &target->polys[targetConnection->poly];
-                if (targetPoly->firstLink == Detour.DTNullLink)
+                entryIndex = entry.Next;
+            }
+        }
+
+        private void ReconnectOffMeshLink(DtMeshTile* sourceTile, int offMeshConnectionIndex)
+        {
+            if (sourceTile == null || sourceTile->header == null)
+            {
+                return;
+            }
+
+            if (offMeshConnectionIndex < 0 || offMeshConnectionIndex >= sourceTile->header->offMeshConCount)
+            {
+                return;
+            }
+
+            var sourceConnection = &sourceTile->offMeshCons[offMeshConnectionIndex];
+            var sourcePoly = &sourceTile->polys[sourceConnection->poly];
+            if (!TryGetOffMeshBasePolyRef(sourceTile, sourcePoly, out var basePolyRef))
+            {
+                return;
+            }
+
+            var destinationRefs = stackalloc DtPolyRef[MaxNeighbourTiles];
+            var destinationRefCount = RemoveOffMeshLandingLinks(sourceTile, sourcePoly, destinationRefs, MaxNeighbourTiles);
+            if (destinationRefCount > 0)
+            {
+                var sourceOffMeshPolyRef = this.GetPolyRefBase(sourceTile) | (DtPolyRef)(int)sourceConnection->poly;
+                for (var i = 0; i < destinationRefCount; ++i)
                 {
-                    continue;
-                }
-
-                var halfExtents = new float3(targetConnection->rad, target->header->walkableClimb, targetConnection->rad);
-
-                var endPosition = targetConnection->EndPos;
-                var polyRef = this.FindNearestPolyInTile(tile, endPosition, halfExtents, out var nearestPoint);
-                if (polyRef == 0)
-                {
-                    continue;
-                }
-
-                if (math.distancesq(nearestPoint.xz, endPosition.xz) > targetConnection->rad * targetConnection->rad)
-                {
-                    continue;
-                }
-
-                target->verts[targetPoly->verts[1]] = nearestPoint;
-
-                var linkIndex = AllocLink(target);
-                if (linkIndex != Detour.DTNullLink)
-                {
-                    var link = &target->links[linkIndex];
-                    link->polyRef = polyRef;
-                    link->edge = 1;
-                    link->side = oppositeSide;
-                    link->bmin = link->bmax = 0;
-                    link->next = targetPoly->firstLink;
-                    targetPoly->firstLink = linkIndex;
-                }
-
-                if ((targetConnection->flags & Detour.DTOffMeshConBidir) != 0)
-                {
-                    var reverseLinkIndex = AllocLink(tile);
-                    if (reverseLinkIndex != Detour.DTNullLink)
+                    if (Detour.StatusFailed(this.GetTileAndPolyByRef(destinationRefs[i], out var previousDestinationTile, out var previousDestinationPoly)))
                     {
-                        var landPolyIndex = (ushort)this.DecodePolyIdPoly(polyRef);
-                        var landPoly = &tile->polys[landPolyIndex];
-                        var reverseLink = &tile->links[reverseLinkIndex];
-                        reverseLink->polyRef = this.GetPolyRefBase(target) | (DtPolyRef)(int)targetConnection->poly;
-                        reverseLink->edge = 0xff;
-                        reverseLink->side = (byte)(side == -1 ? byte.MaxValue : side);
-                        reverseLink->bmin = reverseLink->bmax = 0;
-                        reverseLink->next = landPoly->firstLink;
-                        landPoly->firstLink = reverseLinkIndex;
+                        continue;
                     }
+
+                    var keepCount = previousDestinationTile == sourceTile && destinationRefs[i] == basePolyRef ? 1 : 0;
+                    RemoveLinksToPolyRef(previousDestinationTile, previousDestinationPoly, sourceOffMeshPolyRef, keepCount);
+                }
+            }
+
+            if (!this.TryFindBestOffMeshLanding(sourceTile, sourceConnection, out var destinationTile, out var polyRef, out var nearestPoint))
+            {
+                return;
+            }
+
+            this.ConnectOffMeshLink(sourceTile, sourceConnection, sourcePoly, destinationTile, polyRef, nearestPoint);
+        }
+
+        private bool TryFindBestOffMeshLanding(
+            DtMeshTile* sourceTile,
+            DtOffMeshConnection* sourceConnection,
+            out DtMeshTile* destinationTile,
+            out DtPolyRef destinationPolyRef,
+            out float3 nearestPoint)
+        {
+            destinationTile = null;
+            destinationPolyRef = 0;
+            nearestPoint = sourceConnection->EndPos;
+
+            if (sourceTile == null || sourceTile->header == null || sourceConnection == null)
+            {
+                return false;
+            }
+
+            var halfExtents = new float3(sourceConnection->rad, sourceTile->header->walkableClimb, sourceConnection->rad);
+            var endPosition = sourceConnection->EndPos;
+            var destination = this.GetOffMeshConnectionDestinationTile(endPosition);
+            var destinationTiles = stackalloc DtMeshTile*[MaxNeighbourTiles];
+            var destinationCount = this.GetTilesAt(destination.x, destination.y, destinationTiles, MaxNeighbourTiles);
+
+            var bestDistanceSq = float.MaxValue;
+            DtTileRef bestTileRef = 0;
+            for (var i = 0; i < destinationCount; ++i)
+            {
+                var candidateTile = destinationTiles[i];
+                var candidatePolyRef = this.FindNearestPolyInTile(candidateTile, endPosition, halfExtents, out var candidatePoint);
+                if (candidatePolyRef == 0 || math.distancesq(candidatePoint.xz, endPosition.xz) > sourceConnection->rad * sourceConnection->rad)
+                {
+                    continue;
+                }
+
+                var candidateDistanceSq = math.lengthsq(candidatePoint - endPosition);
+                var candidateTileRef = this.GetTileRef(candidateTile);
+                if (candidateDistanceSq < bestDistanceSq ||
+                    (candidateDistanceSq == bestDistanceSq && (bestTileRef == 0 || candidateTileRef < bestTileRef)))
+                {
+                    destinationTile = candidateTile;
+                    destinationPolyRef = candidatePolyRef;
+                    nearestPoint = candidatePoint;
+                    bestDistanceSq = candidateDistanceSq;
+                    bestTileRef = candidateTileRef;
+                }
+            }
+
+            return destinationTile != null;
+        }
+
+        private void ConnectOffMeshLink(
+            DtMeshTile* sourceTile,
+            DtOffMeshConnection* sourceConnection,
+            DtPoly* sourcePoly,
+            DtMeshTile* destinationTile,
+            DtPolyRef polyRef,
+            in float3 nearestPoint)
+        {
+            if (sourceTile == null || sourceTile->header == null ||
+                sourceConnection == null ||
+                sourcePoly == null ||
+                destinationTile == null ||
+                destinationTile->header == null ||
+                polyRef == 0)
+            {
+                return;
+            }
+
+            sourceTile->verts[sourcePoly->verts[1]] = nearestPoint;
+
+            var linkIndex = AllocLink(sourceTile);
+            if (linkIndex != Detour.DTNullLink)
+            {
+                var link = &sourceTile->links[linkIndex];
+                link->polyRef = polyRef;
+                link->edge = 1;
+                link->side = byte.MaxValue;
+                link->bmin = link->bmax = 0;
+                link->next = sourcePoly->firstLink;
+                sourcePoly->firstLink = linkIndex;
+            }
+
+            if ((sourceConnection->flags & Detour.DTOffMeshConBidir) == 0)
+            {
+                return;
+            }
+
+            var reverseLinkIndex = AllocLink(destinationTile);
+            if (reverseLinkIndex == Detour.DTNullLink)
+            {
+                return;
+            }
+
+            var landPolyIndex = (ushort)this.DecodePolyIdPoly(polyRef);
+            var landPoly = &destinationTile->polys[landPolyIndex];
+            var reverseLink = &destinationTile->links[reverseLinkIndex];
+            reverseLink->polyRef = this.GetPolyRefBase(sourceTile) | (DtPolyRef)(int)sourceConnection->poly;
+            reverseLink->edge = 0xff;
+            reverseLink->side = byte.MaxValue;
+            reverseLink->bmin = reverseLink->bmax = 0;
+            reverseLink->next = landPoly->firstLink;
+            landPoly->firstLink = reverseLinkIndex;
+        }
+
+        private bool TryGetOffMeshLookupSourceTile(DtTileRef sourceTileRef, int offMeshConnectionIndex, out DtMeshTile* sourceTile)
+        {
+            sourceTile = this.GetTileByRef(sourceTileRef);
+            return sourceTile != null &&
+                   sourceTile->header != null &&
+                   offMeshConnectionIndex >= 0 &&
+                   offMeshConnectionIndex < sourceTile->header->offMeshConCount;
+        }
+
+        private void UnconnectRemoteIncomingOffMeshLinks(DtMeshTile* tile)
+        {
+            if (tile == null || tile->header == null)
+            {
+                return;
+            }
+
+            var destination = new int2(tile->header->x, tile->header->y);
+            var hash = ComputeTileHash(destination.x, destination.y, this.remoteOffMeshLookupMask);
+            var entryIndex = this.remoteOffMeshLookupBuckets[hash];
+
+            while (entryIndex != NullRemoteOffMeshEntry)
+            {
+                ref var entry = ref this.remoteOffMeshLookupEntries[entryIndex];
+                if (entry.Destination.Equals(destination) &&
+                    this.TryGetOffMeshLookupSourceTile(entry.SourceTileRef, entry.OffMeshConnectionIndex, out var sourceTile))
+                {
+                    this.ReconnectOffMeshLink(sourceTile, entry.OffMeshConnectionIndex);
+                }
+
+                entryIndex = entry.Next;
+            }
+        }
+
+        private void UnconnectRemoteOutgoingOffMeshLinks(DtMeshTile* tile)
+        {
+            if (tile == null || tile->header == null || tile->header->offMeshConCount == 0)
+            {
+                return;
+            }
+
+            var destinationTiles = stackalloc DtMeshTile*[MaxNeighbourTiles];
+            for (var i = 0; i < tile->header->offMeshConCount; ++i)
+            {
+                var destination = this.GetOffMeshConnectionDestinationTile(tile->offMeshCons[i].EndPos);
+                var destinationCount = this.GetTilesAt(destination.x, destination.y, destinationTiles, MaxNeighbourTiles);
+                for (var j = 0; j < destinationCount; ++j)
+                {
+                    this.UnconnectLinks(destinationTiles[j], tile);
                 }
             }
         }
@@ -1781,6 +2120,122 @@ namespace BovineLabs.Recast
                     }
                 }
             }
+        }
+
+        private static int RemoveOffMeshLandingLinks(DtMeshTile* tile, DtPoly* poly, DtPolyRef* removedRefs, int maxRemovedRefs)
+        {
+            if (tile == null || poly == null)
+            {
+                return 0;
+            }
+
+            var removedCount = 0;
+            var linkIndex = poly->firstLink;
+            var prevLinkIndex = Detour.DTNullLink;
+
+            while (linkIndex != Detour.DTNullLink)
+            {
+                var link = &tile->links[linkIndex];
+                var nextLinkIndex = link->next;
+                if (link->edge == 1)
+                {
+                    if (removedCount < maxRemovedRefs)
+                    {
+                        removedRefs[removedCount++] = link->polyRef;
+                    }
+
+                    if (prevLinkIndex == Detour.DTNullLink)
+                    {
+                        poly->firstLink = nextLinkIndex;
+                    }
+                    else
+                    {
+                        tile->links[prevLinkIndex].next = nextLinkIndex;
+                    }
+
+                    FreeLink(tile, linkIndex);
+                }
+                else
+                {
+                    prevLinkIndex = linkIndex;
+                }
+
+                linkIndex = nextLinkIndex;
+            }
+
+            return removedCount;
+        }
+
+        private static void RemoveLinksToPolyRef(DtMeshTile* tile, DtPoly* poly, DtPolyRef polyRef, int keepCount)
+        {
+            if (tile == null || poly == null)
+            {
+                return;
+            }
+
+            var matchingLinks = 0;
+            for (var linkIndex = poly->firstLink; linkIndex != Detour.DTNullLink; linkIndex = tile->links[linkIndex].next)
+            {
+                if (tile->links[linkIndex].polyRef == polyRef)
+                {
+                    matchingLinks++;
+                }
+            }
+
+            var linksToRemove = matchingLinks - keepCount;
+            if (linksToRemove <= 0)
+            {
+                return;
+            }
+
+            var linkIndexToRemove = poly->firstLink;
+            var prevLinkIndex = Detour.DTNullLink;
+            while (linkIndexToRemove != Detour.DTNullLink && linksToRemove > 0)
+            {
+                var nextLinkIndex = tile->links[linkIndexToRemove].next;
+                if (tile->links[linkIndexToRemove].polyRef == polyRef)
+                {
+                    if (prevLinkIndex == Detour.DTNullLink)
+                    {
+                        poly->firstLink = nextLinkIndex;
+                    }
+                    else
+                    {
+                        tile->links[prevLinkIndex].next = nextLinkIndex;
+                    }
+
+                    FreeLink(tile, linkIndexToRemove);
+                    linksToRemove--;
+                }
+                else
+                {
+                    prevLinkIndex = linkIndexToRemove;
+                }
+
+                linkIndexToRemove = nextLinkIndex;
+            }
+        }
+
+        private static bool TryGetOffMeshBasePolyRef(DtMeshTile* tile, DtPoly* poly, out DtPolyRef basePolyRef)
+        {
+            basePolyRef = 0;
+
+            if (tile == null || poly == null)
+            {
+                return false;
+            }
+
+            for (var linkIndex = poly->firstLink; linkIndex != Detour.DTNullLink; linkIndex = tile->links[linkIndex].next)
+            {
+                var link = &tile->links[linkIndex];
+                if (link->edge == 0)
+                {
+                    basePolyRef = link->polyRef;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private DtPolyRef FindNearestPolyInTile(DtMeshTile* tile, float3 center, float3 halfExtents, out float3 nearestPoint)

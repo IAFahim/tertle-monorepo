@@ -53,7 +53,9 @@ namespace BovineLabs.Recast
             // whose start point is inside the tile.
             byte* offMeshConClass = null;
             var storedOffMeshConCount = 0;
-            var offMeshConLinkCount = 0;
+            var offMeshBaseLinkCount = 0;
+            var offMeshLandingLinkCount = 0;
+            var offMeshLandingReverseLinkCount = 0;
 
             if (createParams->OffMeshConCount > 0)
             {
@@ -108,14 +110,15 @@ namespace BovineLabs.Recast
                         }
                         else
                         {
-                            offMeshConLinkCount++;
                             storedOffMeshConCount++;
+                            offMeshBaseLinkCount += 2;
+                            offMeshLandingLinkCount++;
                         }
                     }
 
-                    if (offMeshConClass[(i * 2) + 1] == 0xff)
+                    if (offMeshConClass[(i * 2) + 1] == 0xff && createParams->OffMeshConDir[i] != 0)
                     {
-                        offMeshConLinkCount++;
+                        offMeshLandingReverseLinkCount++;
                     }
                 }
             }
@@ -150,7 +153,7 @@ namespace BovineLabs.Recast
                 }
             }
 
-            var maxLinkCount = edgeCount + (portalCount * 2) + (offMeshConLinkCount * 2);
+            var maxLinkCount = edgeCount + (portalCount * 2) + offMeshBaseLinkCount + offMeshLandingLinkCount + offMeshLandingReverseLinkCount;
 
             // Find unique detail vertices.
             var uniqueDetailVertCount = 0;

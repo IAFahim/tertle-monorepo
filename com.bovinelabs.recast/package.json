@@ -1,7 +1,7 @@
 {
   "name": "com.bovinelabs.recast",
   "description": "A HPC# port of the Recast navigation-mesh toolset for games.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "unity": "6000.0",
   "displayName": "BovineLabs Recast",
   "dependencies": {

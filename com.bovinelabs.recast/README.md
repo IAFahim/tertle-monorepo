@@ -15,6 +15,7 @@ This package intentionally diverges from upstream Recast/Detour in a few places 
 - Major Recast/Detour objects carry explicit Unity allocator ownership, and several build APIs collapse allocator-failure return channels where allocation failure is treated as fatal in this port.
 - The query surface adds Unity-oriented conveniences such as explicit `DtNavMeshQuery` allocator lifecycle, `ReplaceNavMeshTarget`, `ref Unity.Mathematics.Random` random queries, generic polygon query callbacks, public `GetPortalPoints`, and `UnsafeList` overloads.
 - `FindStraightPath` intentionally uses a small portal-scaled epsilon in the funnel corner tests to reduce near-collinear corner churn in live movement instead of matching upstream's exact zero-threshold comparisons.
+- `DtNavMesh` intentionally stitches off-mesh links to the tile resolved from `DtOffMeshConnection.EndPos`, so long-range portals can connect across non-adjacent tiles once both endpoint tiles are loaded instead of being limited to same-tile or immediate-neighbor stitching.
 - Recast carrier structs such as `RcHeightfield`, `RcCompactHeightfield`, `RcContourSet`, and `RcPolyMeshDetail` are runtime ownership-aware C# representations rather than byte-for-byte native mirrors.
 
 For support and discussions, join the [Discord](https://discord.gg/RTsw6Cxvw3) community.

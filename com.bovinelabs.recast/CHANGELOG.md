@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.6] - 2026-04-23
+
+### Changed
+* `DtNavMesh` now stitches off-mesh links to the exact destination tile resolved from `DtOffMeshConnection.EndPos`, allowing long-range portals across non-adjacent tiles while preserving the existing traversal/off-mesh metadata model
+* Documented the intentional difference from upstream's same-tile or immediate-neighbor off-mesh stitching behavior in the README
+
+### Fixed
+* Fixed stale or missing long-range off-mesh stitching during tile add, late destination-tile load, and destination-tile remove/re-add flows
+* Reserved detour tile link capacity for both start-side and remote landing-side off-mesh attachments so long-range links can be connected safely
+
 ## [1.0.5] - 2026-03-31
 
 ### Changed
